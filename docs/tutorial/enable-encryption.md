@@ -1,9 +1,7 @@
 (tutorial-enable-encryption)=
-# 6. Enable Encryption
+# 5. Enable Encryption
 
 This is a part of the [Charmed Apache Kafka Tutorial](index.md).
-
-## Transport Layer Security (TLS)
 
 [TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security) is used to encrypt data exchanged between two applications; it secures data transmitted over the network. Typically, enabling TLS within a highly available database, and between a highly available database and client/server applications, requires domain-specific knowledge and a high level of expertise. Fortunately, the domain-specific knowledge has been encoded into Charmed Apache Kafka. This means (re-)configuring TLS on Charmed Apache Kafka is readily available and requires minimal effort on your end.
 
@@ -14,7 +12,7 @@ In this tutorial, we will distribute [self-signed certificates](https://en.wikip
 that is also trusted by all applications. This setup is only for show-casing purposes and self-signed certificates should **never** be used in a production cluster. For more information about which charm may better suit your use-case, please refer to [this post](https://charmhub.io/topics/security-with-x-509-certificates).
 ```
 
-### Configure TLS
+## Configure TLS
 
 Before enabling TLS on Charmed Apache Kafka we must first deploy the `self-signed-certificates` charm:
 
@@ -39,12 +37,12 @@ self-signed-certificates/0*   active    idle   10.1.36.91
 ...
 ```
 
-To enable TLS on Charmed Apache Kafka, relate both the `kafka` and `zookeeper` charms with the
+To enable TLS on Charmed Apache Kafka, integrate both the `kafka` and `zookeeper` charms with the
 `self-signed-certificates` charm:
 
 ```shell
-juju relate zookeeper self-signed-certificates
-juju relate kafka:certificates self-signed-certificates
+juju integrate zookeeper self-signed-certificates
+juju integrate kafka:certificates self-signed-certificates
 ```
 
 After the charms settle into `active/idle` states, the Apache Kafka listeners should now have been swapped to the 
@@ -55,7 +53,7 @@ telnet <IP> 9092
 telnet <IP> 9093
 ```
 
-### Enable TLS encrypted connection
+## Enable TLS encrypted connection
 
 Once TLS is configured on the cluster side, client applications should be configured as well to connect to
 the correct port and trust the self-signed CA provided by the `self-signed-certificates` charm. 
@@ -69,7 +67,7 @@ juju remove-relation kafka-test-app kafka
 Then enable encryption on the `kafka-test-app` by relating with the ` self-signed-certificates` charm
 
 ```shell
-juju relate kafka-test-app self-signed-certificates
+juju integrate kafka-test-app self-signed-certificates
 ```
 
 We can then set up the `kafka-test-app` to produce messages with the usual configuration (note that there is no difference 
@@ -79,10 +77,10 @@ here with the unencrypted workflow)
 juju config kafka-test-app topic_name=test_encryption_topic role=producer num_messages=25
 ```
 
-and then relate with the `kafka` cluster
+and then integrate with the `kafka` cluster
 
 ```shell
-juju relate kafka kafka-test-app
+juju integrate kafka kafka-test-app
 ```
 
 As before, you can check that the messages are pushed into the Apache Kafka cluster by inspecting the logs
@@ -95,7 +93,7 @@ Note that if the `kafka-test-app` was running before, there may be multiple logs
 runs. Refer to the latest logs produced and also check that in the logs the connection is indeed established
 with the encrypted port `9093`.
 
-### Remove external TLS certificate
+## Remove external TLS certificate
 
 To remove the external TLS and return to the locally generated one, remove relation with certificates provider:
 

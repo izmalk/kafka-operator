@@ -1,33 +1,31 @@
 (tutorial-deploy)=
-# 3. Deploy Apache Kafka
+# 2. Deploy Apache Kafka
 
 This is a part of the [Charmed Apache Kafka Tutorial](index.md).
-
-## Deploy Charmed Apache Kafka (and Charmed ZooKeeper)
 
 To deploy Charmed Apache Kafka, all you need to do is run the following commands, which will automatically fetch [Apache Kafka](https://charmhub.io/kafka?channel=3/stable) and [Apache ZooKeeper](https://charmhub.io/zookeeper?channel=3/stable) charms from [Charmhub](https://charmhub.io/) and deploy them to your model. For example, to deploy a cluster of five Apache ZooKeeper units and three Apache Kafka units, you can simply run:
 
 ```shell
-$ juju deploy zookeeper -n 5
-$ juju deploy kafka -n 3
+juju deploy zookeeper -n 5
+juju deploy kafka -n 3
 ```
 
 After this, it is necessary to connect them:
 
 ```shell
-$ juju relate kafka zookeeper
+juju integrate kafka zookeeper
 ```
 
 Juju will now fetch Charmed Apache Kafka and Charmed Apache Zookeeper and begin deploying them to the LXD cloud. This process can take several minutes depending on how provisioned (RAM, CPU, etc) your machine is. You can track the progress by running:
 
 ```shell
-juju status --watch 1s
+watch -c juju status --color
 ```
 
 This command is useful for checking the status of Charmed Apache ZooKeeper and Charmed Apache Kafka and gathering information about the machines hosting the two applications. Some of the helpful information it displays includes IP addresses, ports, state, etc. 
 The command updates the status of the cluster every second and as the application starts you can watch the status and messages of Charmed Apache Kafka and Charmed Apache ZooKeeper change. 
 
-Wait until the application is ready - when it is ready, `juju status --watch 1s` will show:
+Wait until the application is ready - when it is ready, `watch -c juju status --color` will show:
 
 ```shell
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
@@ -58,7 +56,7 @@ Machine  State    Address        Inst id        Series  AZ  Message
 7        started  10.244.26.19   juju-f1a2cd-7  jammy       Running
 ```
 
-To exit the screen with `juju status --watch 1s`, enter `Ctrl+c`.
+To exit the screen with `watch -c juju status --color`, enter `Ctrl+c`.
 
 ## Access Apache Kafka cluster
 
@@ -83,7 +81,7 @@ username: admin
 Providing you the `username` and `password` of the Apache Kafka cluster admin user. 
 
 ```{caution}
-When no other application is related to Apache Kafka, the cluster is secured-by-default and external listeners (bound to port `9092`) are disabled, thus preventing any external incoming connection. 
+When no other application is integrated with Apache Kafka, the cluster is secured-by-default and external listeners (bound to port `9092`) are disabled, thus preventing any external incoming connection. 
 ```
 
 Nevertheless, it is still possible to run a command from within the Apache Kafka cluster using the internal listeners in place of the external ones. 
@@ -144,6 +142,5 @@ snap info charmed-kafka
 ## What's next?
 
 However, although the commands above can run within the cluster, it is generally recommended during operations
-to enable external listeners and use these for running the admin commands from outside the cluster. 
-To do so, as we will see in the next section, we will deploy a [data-integrator](https://charmhub.io/data-integrator) charm and relate it to Charmed Apache Kafka.
-
+to enable external listeners and use these for running the admin commands from outside the cluster.
+To do so, as we will see in the next section, we will deploy a [data-integrator](https://charmhub.io/data-integrator) charm and integrate it to Charmed Apache Kafka.

@@ -107,7 +107,7 @@ html_context = {
     # TODO: If there's no such website,
     #       remove the {{ product_page }} link from the page header template
     #       (usually .sphinx/_templates/header.html; also, see README.rst).
-    "product_page": "https://canonical.com/data/kafka",
+    "product_page": "canonical.com/data/kafka",
     # Product tag image; the orange part of your logo, shown in the page header
     #
     # TODO: To add a tag image, uncomment and update as needed.
@@ -170,7 +170,7 @@ html_theme_options = {
 # TODO: If your documentation is hosted on https://docs.ubuntu.com/,
 #       uncomment and update as needed.
 
-# slug = ''
+slug = 'charmed-kafka'
 
 #######################
 # Sitemap configuration: https://sphinx-sitemap.readthedocs.io/
@@ -189,9 +189,15 @@ if 'READTHEDOCS_VERSION' in os.environ:
 else:
     sitemap_url_scheme = 'MANUAL/{link}'
 
-# Template and asset locations
+# Include `lastmod` dates in the sitemap:
 
-#html_static_path = ["_static"]
+sitemap_show_lastmod = True
+
+#######################
+# Template and asset locations
+#######################
+
+html_static_path = ["_static"]
 #templates_path = ["_templates"]
 
 
@@ -208,8 +214,9 @@ else:
 # NOTE: If undefined, set to None, or empty,
 #       the sphinx_reredirects extension will be disabled.
 
-redirects = {}
+# redirects = {}
 
+rediraffe_redirects = "redirects.txt"
 
 ###########################
 # Link checker exceptions #
@@ -233,7 +240,8 @@ linkcheck_ignore = [
     "https://kafka.apache.org/39/documentation.html#georeplication-monitoring",
     "https://launchpad.net/soss",
     "https://cwiki.apache.org/*",
-    "https://archive.apache.org/*"
+    "https://archive.apache.org/*",
+    "https://launchpad.net/zookeeper-releases/3.x/*",
     ]
 
 
@@ -242,7 +250,7 @@ linkcheck_ignore = [
 linkcheck_anchors_ignore_for_url = [r"https://github\.com/.*"]
 
 # give linkcheck multiple tries on failure
-# linkcheck_timeout = 30
+linkcheck_timeout = 60
 linkcheck_retries = 3
 
 ########################
@@ -282,6 +290,7 @@ extensions = [
     "sphinx_last_updated_by_git",
     "sphinx.ext.intersphinx",
     "sphinx_sitemap",
+    "sphinxext.rediraffe",
 ]
 
 # Excludes files or directories from processing
