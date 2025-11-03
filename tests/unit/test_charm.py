@@ -6,7 +6,7 @@ import dataclasses
 import logging
 from pathlib import Path
 from typing import cast
-from unittest.mock import PropertyMock, patch
+from unittest.mock import PropertyMock, patch, Mock
 
 import pytest
 import yaml
@@ -504,6 +504,28 @@ def test_storage_add(
     assert patched_disable_enable.call_count == 1
     assert patched_start.call_count == 1
     assert patched_defer.call_count == 0
+
+
+@pytest.mark.skipif(SUBSTRATE == "k8s", reason="multiple storage not supported in K8s")
+def test_disable_enable_restart_broker_error_handling():
+    """Test that _disable_enable_restart_broker logs an error if broker fails to restart."""
+    charm = Mock()
+    event = Mock()
+    # broker appears healthy but fails to become active after restart
+    charm.broker.healthy = True
+    charm.broker.workload = Mock()
+    charm.broker.workload.disable_enable = Mock()
+    charm.broker.workload.start = Mock()
+    charm.broker.workload.active.return_value = False
+    charm.unit = Mock()
+    charm.unit.name = "kafka/0"
+
+    with patch("charm.logger.error") as patched_error:
+        from charm import KafkaCharm
+
+        KafkaCharm._disable_enable_restart_broker(charm, event)
+
+    patched_error.assert_called_with("Broker 0 failed to restart")
 
 
 def test_config_changed_updates_server_properties(ctx: Context, base_state: State) -> None:
