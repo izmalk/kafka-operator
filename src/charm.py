@@ -5,6 +5,7 @@
 """Charmed Machine Operator for Apache Kafka."""
 
 import logging
+import time
 
 import charm_refresh
 import ops
@@ -187,19 +188,63 @@ class KafkaCharm(TypedCharmBase[CharmConfig]):
 
         The RollingOpsManager expecting a charm instance, we cannot move this method to the broker logic.
         """
+        unit_index = str(self.unit.name).split("/")[-1]
+
         if not self.broker.healthy:
-            logger.warning(f"Broker {self.unit.name.split('/')[1]} is not ready restart")
+            logger.warning(f"Broker {unit_index} is not ready to restart")
             event.defer()
             return
 
-        self.broker.workload.disable_enable()
-        self.broker.workload.start()
-
-        if self.broker.workload.active():
-            logger.info(f'Broker {self.unit.name.split("/")[1]} restarted')
-        else:
-            logger.error(f"Broker {self.unit.name.split('/')[1]} failed to restart")
+        # Attempt disable/enable and start with exception handling
+        try:
+            self.broker.workload.disable_enable()
+            self.broker.workload.start()
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.exception(f"Broker {unit_index} disable/enable/start raised: {exc}")
+            event.defer()
             return
+
+        # Verify the broker becomes active and healthy (retry a few times)
+        MAX_RETRIES = 3
+        SLEEP_SECONDS = 2
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                healthy = self.workload.health_check(
+                    host=self.state.unit_broker.internal_address,
+                    runs_broker=self.state.runs_broker,
+                    runs_controller=self.state.runs_controller,
+                )
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.exception(f"Broker {unit_index} health_check raised: {exc}")
+                healthy = False
+
+            active = False
+            try:
+                active = self.broker.workload.active()
+            except Exception:  # pragma: no cover - defensive
+                active = False
+
+            if healthy and active:
+                break
+
+            logger.info(
+                f"Broker {unit_index} health check attempt {attempt}/{MAX_RETRIES} failed (healthy={healthy}, active={active})"
+            )
+            if attempt < MAX_RETRIES:
+                time.sleep(SLEEP_SECONDS)
+
+        if not (healthy and active):
+            logger.error(f"Broker {unit_index} failed to become healthy after restart")
+            event.defer()
+            return
+
+        # Success - post-restart housekeeping
+        logger.info(f"Broker {unit_index} restarted and healthy")
+        try:
+            self.broker.update_credentials_cache()
+            self.broker.update_peer_truststore_state(force=True)
+        except Exception:  # pragma: no cover - defensive
+            logger.exception(f"Broker {unit_index} post-restart housekeeping failed")
 
     def _on_collect_status(self, event: CollectStatusEvent):
         status = self._determine_unit_status()

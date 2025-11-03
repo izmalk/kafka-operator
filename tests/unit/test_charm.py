@@ -528,6 +528,60 @@ def test_disable_enable_restart_broker_error_handling():
     patched_error.assert_called_with("Broker 0 failed to restart")
 
 
+def test_disable_enable_restart_broker_success():
+    """Test that _disable_enable_restart_broker completes successfully when broker becomes healthy."""
+    charm = Mock()
+    event = Mock()
+    charm.broker.healthy = True
+    charm.broker.workload = Mock()
+    charm.broker.workload.disable_enable = Mock()
+    charm.broker.workload.start = Mock()
+    # active returns True
+    charm.broker.workload.active.return_value = True
+    charm.unit = Mock()
+    charm.unit.name = "kafka/0"
+
+    # Simulate health_check returning True
+    class FakeCharm:
+        workload = Mock()
+        broker = charm.broker
+        unit = charm.unit
+        state = Mock()
+        state.unit_broker = Mock()
+        state.unit_broker.internal_address = "127.0.0.1"
+        runs_broker = True
+        runs_controller = False
+
+    fake = FakeCharm()
+    fake.workload.health_check.return_value = True
+
+    from charm import KafkaCharm
+    # Should not raise or defer
+    KafkaCharm._disable_enable_restart_broker(fake, event)
+
+
+def test_disable_enable_restart_broker_start_exception():
+    """Test that exceptions during start cause event.defer() and are logged."""
+    charm = Mock()
+    event = Mock()
+    charm.broker.healthy = True
+    charm.broker.workload = Mock()
+    def raise_exc():
+        raise RuntimeError("boom")
+
+    charm.broker.workload.disable_enable = Mock()
+    charm.broker.workload.start = Mock(side_effect=raise_exc)
+    charm.unit = Mock()
+    charm.unit.name = "kafka/0"
+
+    with patch("charm.logger.exception") as patched_exc:
+        from charm import KafkaCharm
+
+        KafkaCharm._disable_enable_restart_broker(charm, event)
+
+    patched_exc.assert_called()
+
+
 def test_config_changed_updates_server_properties(ctx: Context, base_state: State) -> None:
     """Checks that new charm/unit config writes server config to unit on config changed hook."""
     # Given
