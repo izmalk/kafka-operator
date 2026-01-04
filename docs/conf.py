@@ -178,7 +178,8 @@ slug = 'charmed-kafka'
 
 # Base URL of RTD hosted project
 
-html_baseurl = 'https://canonical-charmed-kafka.readthedocs-hosted.com/'
+# html_baseurl = 'https://canonical-charmed-kafka.readthedocs-hosted.com/'
+html_baseurl = os.environ.get("READTHEDOCS_CANONICAL_URL", "/")
 
 # URL scheme. Add language and version scheme elements.
 # When configured with RTD variables, check for RTD environment so manual runs succeed:
