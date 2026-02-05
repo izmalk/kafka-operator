@@ -1,0 +1,51 @@
+project: kafka-operator-tutorial-tests
+
+environment:
+  # Tutorial workspace location
+  TUTORIAL_DOCS: /root/spread-tests/docs/tutorial
+  HELPERS: /root/spread-tests/helpers
+
+# Path where project files will be placed on remote system
+path: /root/spread-tests
+
+# Include tutorial docs and helpers
+rename:
+  - s,^../../docs,docs,
+
+backends:
+  lxd:
+    systems:
+      - ubuntu-24.04
+
+# Path where project files will be placed on remote system
+path: /root/spread-tests
+
+suites:
+  tutorial/:
+    summary: Tutorial documentation tests
+    # Ensure tasks run in the correct order
+    priority: 100
+    
+    prepare: |
+      echo "=== Preparing tutorial test suite ==="
+      # Ensure we have necessary tools
+      apt-get update -qq
+      apt-get install -y -qq python3 python3-pip jq yq curl wget
+      
+      # Make helpers executable
+      chmod +x $HELPERS/*.sh || true
+    
+    restore: |
+      echo "=== Cleaning up tutorial test suite ==="
+      # Destroy Juju model and controller if they exist
+      juju destroy-model tutorial --destroy-storage --force --no-wait -y 2>/dev/null || true
+      juju destroy-controller overlord --destroy-storage --force --no-wait -y 2>/dev/null || true
+      
+      # Wait a bit for cleanup
+      sleep 5
+      
+      # Clean up any remaining LXD containers
+      lxc list --format=json | jq -r '.[].name' | grep -E 'juju-' | xargs -r -I {} lxc delete {} --force || true
+    
+    restore-each: |
+      echo "=== Cleanup after task ==="

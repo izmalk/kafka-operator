@@ -1,0 +1,129 @@
+summary: Tutorial Step 2 - Deploy Apache Kafka
+priority: 90
+kill-timeout: 30m  # Kafka deployment takes time
+
+execute: |
+    set -e
+    echo "=== Running Tutorial Step 2: Deploy Apache Kafka ==="
+    
+    # Extract and run commands from the markdown file
+    TUTORIAL_FILE="$TUTORIAL_DOCS/deploy.md"
+    
+    if [ ! -f "$TUTORIAL_FILE" ]; then
+        echo "ERROR: Tutorial file not found: $TUTORIAL_FILE"
+        exit 1
+    fi
+    
+    # Extract commands
+    python3 $HELPERS/extract_commands.py "$TUTORIAL_FILE" > /tmp/commands.sh
+    
+    # Show what we're about to run
+    echo "--- Commands to execute ---"
+    cat /tmp/commands.sh
+    echo "--- End of commands ---"
+    
+    # Execute the commands (but skip the watch command and manual juju status checks)
+    # We'll filter out interactive/watch commands
+    grep -v "watch -n" /tmp/commands.sh | \
+    grep -v "^juju status" | \
+    grep -v "^bootstrap_address=" | \
+    grep -v "^export BOOTSTRAP_SERVER=" | \
+    grep -v "^juju show-secret" | \
+    grep -v "^juju show-unit" | \
+    grep -v "^juju ssh" > /tmp/commands_filtered.sh || true
+    
+    # Execute filtered commands
+    bash /tmp/commands_filtered.sh
+    
+    # Wait for deployment to stabilize
+    echo ""
+    echo "=== Waiting for Kafka deployment to complete ==="
+    $HELPERS/juju_wait.sh 900  # 15 minutes timeout
+    
+    # === ASSERTIONS ===
+    echo ""
+    echo "=== Running assertions ==="
+    
+    # 1. Verify Kafka application is deployed
+    echo "✓ Checking Kafka application..."
+    juju status kafka --format=json | jq -e '.applications.kafka' > /dev/null || \
+        (echo "ERROR: Kafka application not found"; exit 1)
+    
+    # 2. Verify KRaft controller is deployed
+    echo "✓ Checking KRaft controller..."
+    juju status kraft --format=json | jq -e '.applications.kraft' > /dev/null || \
+        (echo "ERROR: KRaft application not found"; exit 1)
+    
+    # 3. Verify Kafka has 3 units
+    echo "✓ Checking Kafka unit count..."
+    KAFKA_UNITS=$(juju status kafka --format=json | jq '.applications.kafka.units | length')
+    if [ "$KAFKA_UNITS" != "3" ]; then
+        echo "ERROR: Expected 3 Kafka units, found $KAFKA_UNITS"
+        exit 1
+    fi
+    
+    # 4. Verify KRaft has 3 units
+    echo "✓ Checking KRaft unit count..."
+    KRAFT_UNITS=$(juju status kraft --format=json | jq '.applications.kraft.units | length')
+    if [ "$KRAFT_UNITS" != "3" ]; then
+        echo "ERROR: Expected 3 KRaft units, found $KRAFT_UNITS"
+        exit 1
+    fi
+    
+    # 5. Verify all Kafka units are active/idle
+    echo "✓ Checking Kafka units status..."
+    KAFKA_ACTIVE=$(juju status kafka --format=json | jq -r '
+        .applications.kafka.units | to_entries[] | 
+        select(
+            (.value."workload-status".current == "active") and 
+            (.value."agent-status".current == "idle")
+        ) | .key' | wc -l)
+    if [ "$KAFKA_ACTIVE" != "3" ]; then
+        echo "ERROR: Not all Kafka units are active/idle"
+        juju status kafka
+        exit 1
+    fi
+    
+    # 6. Verify all KRaft units are active/idle
+    echo "✓ Checking KRaft units status..."
+    KRAFT_ACTIVE=$(juju status kraft --format=json | jq -r '
+        .applications.kraft.units | to_entries[] | 
+        select(
+            (.value."workload-status".current == "active") and 
+            (.value."agent-status".current == "idle")
+        ) | .key' | wc -l)
+    if [ "$KRAFT_ACTIVE" != "3" ]; then
+        echo "ERROR: Not all KRaft units are active/idle"
+        juju status kraft
+        exit 1
+    fi
+    
+    # 7. Verify the integration exists
+    echo "✓ Checking Kafka-KRaft integration..."
+    juju status --format=json | jq -e '
+        .integrations | to_entries[] | 
+        select(
+            (.value.provider == "kafka:peer-cluster-orchestrator" and 
+             .value.requirer == "kraft:peer-cluster") or
+            (.value.provider == "kraft:peer-cluster" and 
+             .value.requirer == "kafka:peer-cluster-orchestrator")
+        )' > /dev/null || (echo "ERROR: Kafka-KRaft integration not found"; exit 1)
+    
+    # 8. Verify cluster secret exists
+    echo "✓ Checking cluster secret..."
+    juju secrets --format=json | jq -e '.[] | select(.label == "cluster.kafka.app")' > /dev/null || \
+        (echo "ERROR: Cluster secret not found"; exit 1)
+    
+    # 9. Verify Kafka ports are open
+    echo "✓ Checking Kafka ports..."
+    juju status kafka --format=json | jq -e '.applications.kafka.units | to_entries[0].value."open-ports"' | \
+        grep -q "19093/tcp" || (echo "ERROR: Kafka port 19093 not open"; exit 1)
+    
+    echo ""
+    echo "=== ✓ All assertions passed for Step 2 ==="
+    echo "Kafka cluster is deployed and operational!"
+    
+    # Show final status
+    echo ""
+    echo "=== Final Status ==="
+    juju status

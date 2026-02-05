@@ -1,0 +1,81 @@
+summary: Tutorial Step 1 - Set up the environment
+priority: 100
+kill-timeout: 45m  # Juju bootstrap in nested LXD can be very slow
+
+execute: |
+    set -e
+    echo "=== Running Tutorial Step 1: Set up the environment ==="
+    
+    # Prepare for Juju snap (strict confinement requires manual directory creation)
+    mkdir -p /root/.local/share/juju
+    
+    # Apply LXD performance tuning for nested containers
+    # These settings help Juju bootstrap faster in nested LXD
+    echo "Applying LXD performance tuning..."
+    lxc config set core.https_address "[::]"
+    
+    # Extract and run commands from the markdown file
+    TUTORIAL_FILE="$TUTORIAL_DOCS/environment.md"
+    
+    if [ ! -f "$TUTORIAL_FILE" ]; then
+        echo "ERROR: Tutorial file not found: $TUTORIAL_FILE"
+        exit 1
+    fi
+    
+    # Extract commands
+    python3 $HELPERS/extract_commands.py "$TUTORIAL_FILE" > /tmp/commands.sh
+    
+    # Show what we're about to run
+    echo "--- Commands to execute ---"
+    cat /tmp/commands.sh
+    echo "--- End of commands ---"
+    
+    # Execute the commands
+    # Note: Juju bootstrap can take 20-30 minutes in nested LXD environments
+    echo "Starting command execution (Juju bootstrap may take 20-30 minutes)..."
+    bash /tmp/commands.sh
+    
+    # === ASSERTIONS ===
+    echo ""
+    echo "=== Running assertions ==="
+    
+    # 1. Verify LXD is installed and initialized
+    echo "✓ Checking LXD installation..."
+    which lxd || (echo "ERROR: LXD not found"; exit 1)
+    lxc list > /dev/null || (echo "ERROR: LXD not initialized properly"; exit 1)
+    
+    # 2. Verify LXD network has no IPv6
+    echo "✓ Checking LXD network configuration..."
+    IPV6_ADDR=$(lxc network get lxdbr0 ipv6.address || echo "none")
+    if [ "$IPV6_ADDR" != "none" ]; then
+        echo "ERROR: IPv6 should be disabled on lxdbr0"
+        exit 1
+    fi
+    
+    # 3. Verify Juju is installed
+    echo "✓ Checking Juju installation..."
+    which juju || (echo "ERROR: Juju not found"; exit 1)
+    
+    # 4. Verify Juju controller exists and is running
+    echo "✓ Checking Juju controller..."
+    juju controllers --format=json | jq -e '.controllers.overlord' > /dev/null || \
+        (echo "ERROR: Juju controller 'overlord' not found"; exit 1)
+    
+    # 5. Verify the tutorial model exists
+    echo "✓ Checking Juju model..."
+    juju models --format=json | jq -e '.models[] | select(.name == "tutorial")' > /dev/null || \
+        (echo "ERROR: Juju model 'tutorial' not found"; exit 1)
+    
+    # 6. Verify we can switch to the tutorial model
+    echo "✓ Verifying model is accessible..."
+    juju status -m tutorial > /dev/null || \
+        (echo "ERROR: Cannot access tutorial model"; exit 1)
+    
+    # 7. Verify LXD container for Juju controller exists
+    echo "✓ Checking Juju controller container..."
+    lxc list --format=json | jq -e '.[] | select(.name | startswith("juju-"))' > /dev/null || \
+        (echo "ERROR: No Juju controller container found"; exit 1)
+    
+    echo ""
+    echo "=== ✓ All assertions passed for Step 1 ==="
+    echo "Environment is properly set up!"
