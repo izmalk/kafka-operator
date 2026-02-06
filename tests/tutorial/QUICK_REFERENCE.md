@@ -4,7 +4,7 @@
 
 ### ⚡ Fast Approach (Recommended for Local Testing)
 ```bash
-cd /home/izmalk/test/docs/izmalk/kafka-operator/tests/tutorial
+cd tests/tutorial
 
 # Run directly on host (10-15 minutes, uses same markdown!)
 ./run_direct.sh
@@ -12,7 +12,7 @@ cd /home/izmalk/test/docs/izmalk/kafka-operator/tests/tutorial
 
 ### 🔒 Isolated Approach (Full Spread Testing)
 ```bash
-cd /home/izmalk/test/docs/izmalk/kafka-operator/tests/tutorial
+cd tests/tutorial
 
 # Run all implemented tests (Steps 1-2) in LXD containers
 # NOTE: Slow (40-50 min) due to nested LXD
@@ -64,10 +64,10 @@ cd /home/izmalk/test/docs/izmalk/kafka-operator/tests/tutorial
 
 ```bash
 # 1. Update the markdown file
-vim ../../docs/tutorial/environment.md
+vim docs/tutorial/environment.md
 
 # 2. Copy to test directory
-cp ../../docs/tutorial/environment.md docs/tutorial/
+cp docs/tutorial/environment.md tests/tutorial/docs/tutorial/
 
 # 3. Run test
 ~/go/bin/spread lxd:ubuntu-24.04:tutorial/01-environment
@@ -77,7 +77,7 @@ cp ../../docs/tutorial/environment.md docs/tutorial/
 
 ```bash
 # 1. Copy markdown
-cp ../../docs/tutorial/new-step.md docs/tutorial/
+cp docs/tutorial/new-step.md tests/tutorial/docs/tutorial/
 
 # 2. Create task directory
 mkdir tutorial/03-new-step

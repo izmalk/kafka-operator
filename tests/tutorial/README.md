@@ -19,7 +19,7 @@ These tests automatically extract and execute shell commands from the tutorial m
 
 **⚡ Recommended for local testing (faster):**
 ```bash
-cd /home/izmalk/test/docs/izmalk/kafka-operator/tests/tutorial
+cd tests/tutorial
 
 # Run tests directly on your host machine (10-15 minutes total)
 ./run_direct.sh
@@ -27,7 +27,7 @@ cd /home/izmalk/test/docs/izmalk/kafka-operator/tests/tutorial
 
 **🔒 For full isolation (slower but more reproducible):**
 ```bash
-cd /home/izmalk/test/docs/izmalk/kafka-operator/tests/tutorial
+cd tests/tutorial
 
 # Run in isolated LXD containers (40-50 minutes due to nested LXD)
 ./run_tests.sh
@@ -132,7 +132,7 @@ The suite automatically cleans up resources:
 
 ### Run all tutorial tests:
 ```bash
-cd /home/izmalk/test/docs/izmalk/kafka-operator/tests/tutorial
+cd tests/tutorial
 ~/go/bin/spread
 ```
 
@@ -163,10 +163,10 @@ cd /home/izmalk/test/docs/izmalk/kafka-operator/tests/tutorial
 
 When you update the tutorial documentation:
 
-1. Edit the markdown file in `/home/izmalk/test/docs/izmalk/kafka-operator/docs/tutorial/`
+1. Edit the markdown file in `docs/tutorial/`
 2. Copy it to the test directory:
    ```bash
-   cp ../../docs/tutorial/environment.md docs/tutorial/
+   cp docs/tutorial/environment.md tests/tutorial/docs/tutorial/
    ```
 3. Run the tests to verify:
    ```bash

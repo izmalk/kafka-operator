@@ -98,7 +98,7 @@ Each task:
 
 ### Quick Start
 ```bash
-cd /home/izmalk/test/docs/izmalk/kafka-operator/tests/tutorial
+cd tests/tutorial
 
 # Run both implemented tests
 ./run_tests.sh

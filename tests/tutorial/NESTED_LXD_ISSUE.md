@@ -47,7 +47,7 @@ Nested virtualization has significant performance overhead:
 
 **Usage:**
 ```bash
-cd /home/izmalk/test/docs/izmalk/kafka-operator/tests/tutorial
+cd tests/tutorial
 ./run_direct.sh
 ```
 
@@ -74,7 +74,7 @@ cd /home/izmalk/test/docs/izmalk/kafka-operator/tests/tutorial
 
 **Usage:**
 ```bash
-cd /home/izmalk/test/docs/izmalk/kafka-operator/tests/tutorial
+cd tests/tutorial
 ./run_tests.sh  # Or individual spread commands
 ```
 
@@ -120,7 +120,7 @@ Consider both:
 
 1. **Try the direct approach first:**
    ```bash
-   cd /home/izmalk/test/docs/izmalk/kafka-operator/tests/tutorial
+   cd tests/tutorial
    ./run_direct.sh
    ```
 
