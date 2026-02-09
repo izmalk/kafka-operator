@@ -28,6 +28,15 @@ suites:
     
     prepare: |
       echo "=== Preparing tutorial test suite ==="
+      
+      # Configure LXD profile for nested snap support (must be done on host)
+      echo "Configuring LXD default profile for nested containers..."
+      lxc profile set default security.nesting true
+      lxc profile set default security.privileged true
+      
+      echo "LXD profile configuration:"
+      lxc profile show default | grep -A 2 "security"
+      
       # Ensure we have necessary tools
       apt-get update -qq
       apt-get install -y -qq python3 python3-pip jq yq curl wget

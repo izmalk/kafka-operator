@@ -15,6 +15,22 @@ The test framework has been successfully implemented with:
 
 These tests automatically extract and execute shell commands from the tutorial markdown files, ensuring the tutorial stays up-to-date and functional. **The markdown files are the single source of truth** - when you update the tutorial, the tests automatically use the new commands.
 
+## ⚠️ Important: Nested LXD Limitations
+
+**Spread tests require non-nested LXD environments** to work reliably with Juju snaps. Running Spread tests on your local workstation creates 3 levels of nesting (host → Spread container → Juju container) which causes snapd communication failures.
+
+**Where Spread tests work:**
+- ✅ CI/CD pipelines on bare metal or VMs
+- ✅ Cloud instances (not nested)
+- ✅ Dedicated test infrastructure
+
+**Where Spread tests fail:**
+- ❌ Local development machines (nested LXD)
+- ❌ LXD containers or VMs on workstations
+- ❌ Any environment with pre-existing containerization
+
+**For local testing, use `./run_direct.sh` instead** - it's faster and avoids nesting issues.
+
 ## Quick Start
 
 **⚡ Recommended for local testing (faster):**

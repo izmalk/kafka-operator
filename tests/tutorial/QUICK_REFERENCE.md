@@ -2,27 +2,38 @@
 
 ## 🚀 Run Tests
 
-### ⚡ Fast Approach (Recommended for Local Testing)
+First, navigate to the tutorial tests directory:
+
 ```bash
 cd tests/tutorial
+```
 
-# Run directly on host (10-15 minutes, uses same markdown!)
+### ⚡ Fast Approach (Recommended for Local Testing)
+
+Run directly on host (10-15 minutes):
+
+```bash
 ./run_direct.sh
 ```
 
 ### 🔒 Isolated Approach (Full Spread Testing)
+
+Run in LXD containers (40-50 minutes):
+
 ```bash
-cd tests/tutorial
-
-# Run all implemented tests (Steps 1-2) in LXD containers
-# NOTE: Slow (40-50 min) due to nested LXD
 ./run_tests.sh
+```
 
-# Run individual tests
+Alternatively, run individual tests:
+
+```bash
 ~/go/bin/spread lxd:ubuntu-24.04:tutorial/01-environment
 ~/go/bin/spread lxd:ubuntu-24.04:tutorial/02-deploy
+```
 
-# Run with reuse (faster)
+Or run with reuse for faster results:
+
+```bash
 ~/go/bin/spread -reuse lxd:ubuntu-24.04:tutorial/01-environment
 ~/go/bin/spread -reuse lxd:ubuntu-24.04:tutorial/02-deploy
 ```

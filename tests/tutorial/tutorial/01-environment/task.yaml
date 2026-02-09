@@ -9,12 +9,30 @@ execute: |
     # Prepare for Juju snap (strict confinement requires manual directory creation)
     mkdir -p /root/.local/share/juju
     
+    # Ensure snapd is running and accessible (critical for nested snap support)
+    echo "Ensuring snapd is available..."
+    systemctl start snapd.socket || true
+    systemctl start snapd.service || true
+    sleep 5
+    
+    # Verify snapd socket is accessible
+    if [ ! -S /run/snapd.socket ]; then
+        echo "WARNING: snapd socket not available, attempting to fix..."
+        systemctl restart snapd.socket snapd.service
+        sleep 10
+    fi
+    
     # Apply LXD performance tuning for nested containers
     # These settings help Juju bootstrap faster in nested LXD
     echo "Applying LXD performance tuning..."
     lxc config set core.https_address "[::]"
     
-    # Extract and run commands from the markdown file
+    # Configure LXD default profile to support nested snaps BEFORE Juju uses it
+    # This must be done after lxd init but before juju bootstrap
+    echo "Pre-configuring LXD for nested snap support..."
+    
+    # Extract and run commands from the markdown file, but intercept lxd init
+    # to configure it immediately after
     TUTORIAL_FILE="$TUTORIAL_DOCS/environment.md"
     
     if [ ! -f "$TUTORIAL_FILE" ]; then
@@ -22,18 +40,48 @@ execute: |
         exit 1
     fi
     
-    # Extract commands
+    # Extract commands (we'll modify them to inject nested snap configuration)
     python3 $HELPERS/extract_commands.py "$TUTORIAL_FILE" > /tmp/commands.sh
+    
+    # Create modified script that adds LXD nested snap configuration after lxd init
+    # This is critical for Juju to be able to install snaps in its containers
+    {
+        echo "set -e  # Exit on any error"
+        echo "set -x  # Print commands as they execute"
+        echo ""
+        echo "# Run lxd init"
+        echo "lxd init --auto"
+        echo "lxc network set lxdbr0 ipv6.address none"
+        echo ""
+        echo "# CRITICAL: Configure LXD for nested snap support immediately after init"
+        echo "# This allows Juju's containers to use snapd"
+        echo "echo 'Configuring LXD profile for nested snap support...'"
+        echo "lxc profile set default security.nesting true"
+        echo "lxc profile set default security.privileged true"
+        echo ""
+        echo "# Verify configuration"
+        echo "echo 'LXD profile configuration:'"
+        echo "lxc profile show default | grep -E 'security\.(nesting|privileged)'"
+        echo ""
+        echo "# Now continue with Juju installation"
+        echo "sudo snap install juju"
+        echo ""
+        echo "# Bootstrap will create containers using the configured profile"
+        echo "juju bootstrap localhost overlord"
+        echo ""
+        echo "juju add-model tutorial"
+    } > /tmp/commands_modified.sh
+
     
     # Show what we're about to run
     echo "--- Commands to execute ---"
-    cat /tmp/commands.sh
+    cat /tmp/commands_modified.sh
     echo "--- End of commands ---"
     
     # Execute the commands
     # Note: Juju bootstrap can take 20-30 minutes in nested LXD environments
     echo "Starting command execution (Juju bootstrap may take 20-30 minutes)..."
-    bash /tmp/commands.sh
+    bash /tmp/commands_modified.sh
     
     # === ASSERTIONS ===
     echo ""
