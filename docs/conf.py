@@ -1,5 +1,4 @@
 import datetime
-import ast
 import os
 import yaml
 
@@ -28,11 +27,10 @@ import yaml
 project = "Charmed Apache Kafka"
 author = "Canonical Ltd."
 
-
 # Sidebar documentation title; best kept reasonably short
 #
 # TODO: To include a version number, add it here (hardcoded or automated).
-#
+version = "beta"
 # TODO: To disable the title, set to an empty string.
 
 html_title = project + " documentation"
@@ -61,8 +59,7 @@ html_title = project + " documentation"
 #         -H 'Accept: application/vnd.github.v3.raw' \
 #         https://api.github.com/repos/canonical/<REPO> | jq '.created_at'
 
-copyright = "%s CC-BY-SA, %s" % (datetime.date.today().year, author)
-
+copyright = f"{datetime.date.today().year}"
 
 # Documentation website URL
 #
@@ -71,7 +68,7 @@ copyright = "%s CC-BY-SA, %s" % (datetime.date.today().year, author)
 # NOTE: The Open Graph Protocol (OGP) enhances page display in a social graph
 #       and is used by social media platforms; see https://ogp.me/
 
-ogp_site_url = "https://canonical-charmed-kafka.readthedocs-hosted.com/"
+ogp_site_url = "https://canonical.com/data/kafka"
 
 
 # Preview name of the documentation website
@@ -92,7 +89,7 @@ ogp_image = "https://assets.ubuntu.com/v1/253da317-image-document-ubuntudocs.svg
 
 # TODO: To customise the favicon, uncomment and update as needed.
 
-# html_favicon = '.sphinx/_static/favicon.png'
+# html_favicon = ".sphinx/_static/favicon.png"
 
 
 # Dictionary of values to pass into the Sphinx context for all pages:
@@ -107,18 +104,34 @@ html_context = {
     # TODO: If there's no such website,
     #       remove the {{ product_page }} link from the page header template
     #       (usually .sphinx/_templates/header.html; also, see README.rst).
-    "product_page": "canonical.com/data/kafka",
+    "product_page": "documentation.ubuntu.com",
     # Product tag image; the orange part of your logo, shown in the page header
     #
     # TODO: To add a tag image, uncomment and update as needed.
     # 'product_tag': '_static/tag.png',
+    # 
+    # Inherit project name
+    "project": project, 
+    # Inherit the author value
+    "author": author,
+    # Licensing information
+    # 
+    # TODO: Change your product's license name and a link to its file.
+    # For the name, we recommend using the standard shorthand identifier from
+    # https://spdx.org/licenses
+    # For the URL, link directly to the product's license statement, typically found on
+    # the product's home page or in its GitHub project.
+    "license": {
+        "name": "LGPL-3.0-only",
+        "url": "https://github.com/canonical/ulwazi/blob/main/LICENSE",
+    },
     # Your Discourse instance URL
     #
     # TODO: Change to your Discourse instance URL or leave empty.
     #
     # NOTE: If set, adding ':discourse: 123' to an .rst file
     #       will add a link to Discourse topic 123 at the bottom of the page.
-    "discourse": "https://discourse.charmhub.io",
+    "discourse": "https://discourse.ubuntu.com",
     # Your Mattermost channel URL
     #
     # TODO: Change to your Mattermost channel URL or leave empty.
@@ -133,25 +146,56 @@ html_context = {
     #
     # NOTE: If set, links for viewing the documentation source files
     #       and creating GitHub issues are added at the bottom of each page.
-    "github_url": "https://github.com/canonical/kafka-operator",
+    "github_url": "https://github.com/canonical/ulwazi",
     # Docs branch in the repo; used in links for viewing the source files
     #
     # TODO: To customise the branch, uncomment and update as needed.
-    'repo_default_branch': 'main',
+    "repo_default_branch": "main",
     # Docs location in the repo; used in links for viewing the source files
     #
-
-
     # TODO: To customise the directory, uncomment and update as needed.
     "repo_folder": "/docs/",
     # TODO: To enable or disable the Previous / Next buttons at the bottom of pages
     # Valid options: none, prev, next, both
-    "sequential_nav": "both",
+    # "sequential_nav": "both",
     # TODO: To enable listing contributors on individual pages, set to True
     "display_contributors": False,
 
     # Required for feedback button    
-    'github_issues': 'enabled',
+    "feedback": True,
+    "github_issues": "enabled",
+    "default_source_extension": ".md",
+    "default_edit_url": "https://github.com/canonical/ulwazi/edit/main/docs/index.rst",
+    "default_view_url": "https://github.com/canonical/ulwazi/blob/main/docs/index.rst",
+
+    # Horizontal Nav Menu
+    "company": "Canonical",
+    "link1_URL": "https://snapcraft.io/",
+    "link1_name": "First optional link",
+    "link2_URL": "https://snapcraft.io/",
+    "link2_name": "Second optional link",
+
+    # Canonical Product menu
+    # Uncomment if you need a product menu added on the top of every page
+    "add_product_menu": True,
+    
+    # Main Horizontal menu
+    # "is_docs": False, # Purpose unknown
+    "logo_link_URL": "https://documentation.ubuntu.com",
+    "logo_img_URL": "https://assets.ubuntu.com/v1/82818827-CoF_white.svg",
+    "logo_title": "Canonical",
+
+    # TODO: Customize the footer.
+    "footer": {
+        # Whether to add the product name as the first entry.
+        "product": True,
+        # Whether to add the license as the second entry.
+        "license": True,
+        # List your footer entries. Accepts HTML tags.
+        "entries": [
+            '<a class="js-revoke-cookie-manager" href="#tracker-settings">Manage your tracker settings</a>',
+        ]
+    }
 }
 
 # TODO: To enable the edit button on pages, uncomment and change the link to a
@@ -161,9 +205,9 @@ html_context = {
 # - https://launchpad.net/example
 # - https://git.launchpad.net/example
 #
-html_theme_options = {
-'source_edit_link': 'https://github.com/canonical/kafka-operator',
-}
+# html_theme_options = {
+# 'source_edit_link': 'https://github.com/canonical/sphinx-docs-starter-pack',
+# }
 
 # Project slug; see https://meta.discourse.org/t/what-is-category-slug/87897
 #
@@ -172,33 +216,37 @@ html_theme_options = {
 
 # slug = ''
 
+# Limit the number of levels for Table of contents
+localtoc_max_depth = 3
+
 #######################
 # Sitemap configuration: https://sphinx-sitemap.readthedocs.io/
 #######################
 
 # Base URL of RTD hosted project
 
-html_baseurl = 'https://documentation.ubuntu.com/charmed-kafka/'
+html_baseurl = "https://canonical-starter-pack.readthedocs-hosted.com/"
 
 # URL scheme. Add language and version scheme elements.
 # When configured with RTD variables, check for RTD environment so manual runs succeed:
 
-if 'READTHEDOCS_VERSION' in os.environ:
+if "READTHEDOCS_VERSION" in os.environ:
     version = os.environ["READTHEDOCS_VERSION"]
-    sitemap_url_scheme = '{version}{link}'
+    sitemap_url_scheme = "{version}{link}"
 else:
-    sitemap_url_scheme = 'MANUAL/{link}'
+    sitemap_url_scheme = "MANUAL/{link}"
 
+# Include `lastmod` dates in the sitemap:
+
+sitemap_show_lastmod = True
+
+#######################
 # Template and asset locations
+#######################
 
-html_static_path = [
-    ".sphinx/_static",
-]
-
-templates_path = [
-    ".sphinx/_templates",
-]
-
+html_theme = "ulwazi"
+html_static_path = ["_static"]
+templates_path = ["_templates"]
 
 #############
 # Redirects #
@@ -226,12 +274,7 @@ redirects = {}
 
 linkcheck_ignore = [
     "http://127.0.0.1:8000",
-    "https://github.com/canonical/ACME/*",
-    "https://matrix.to/#/#charmhub-data-platform:ubuntu.com",
-    "https://us-east-1.console.aws.amazon.com/ec2/",
-    "https://launchpad.net/soss",
-    "https://cwiki.apache.org/*",
-    "https://archive.apache.org/*",
+    "https://github.com/canonical/ACME/*"
     ]
 
 
@@ -253,7 +296,13 @@ linkcheck_retries = 3
 # NOTE: By default, the following MyST extensions are enabled:
 #       substitution, deflist, linkify
 
-# myst_enable_extensions = set()
+myst_enable_extensions = {
+    "colon_fence",
+    "deflist",
+    "substitution",
+    "tasklist"
+}
+
 
 
 # Custom Sphinx extensions; see
@@ -275,32 +324,43 @@ linkcheck_retries = 3
 #       - youtube-links
 
 extensions = [
-    "canonical_sphinx",
+    "sphinx_terminal",
     "sphinxcontrib.cairosvgconverter",
     "sphinx_last_updated_by_git",
     "sphinx.ext.intersphinx",
     "sphinx_sitemap",
+    "ulwazi",
+    "sphinx_modern_pdf_style",
+    "canonical_sphinx_config",
+    "myst_parser",
+    "sphinxcontrib.jquery",
+    "sphinx_tabs.tabs",
+    "sphinx_design",
 ]
 
 # Excludes files or directories from processing
 
 exclude_patterns = [
     "doc-cheat-sheet*",
+    "_build", 
+    "Thumbs.db", 
+    ".DS_Store"
 ]
 
 # Adds custom CSS files, located under 'html_static_path'
 
-html_css_files = [
-    "cookie-banner.css",
-]
+# html_css_files = []
 
 
 # Adds custom JavaScript files, located under 'html_static_path'
 
-html_js_files = [
-    "bundle.js",
-]
+# html_js_files = []
 
+
+# Syntax highlighting settings
+
+highlight_language = "none" # default
+pygments_style = "autumn" # see https://pygments.org/styles for more
 
 # Specifies a reST snippet to be appended to each .rst file
 
@@ -351,12 +411,14 @@ if "discourse_prefix" not in html_context and "discourse" in html_context:
 
 # Workaround for substitutions.yaml
 
-if os.path.exists('./reuse/substitutions.yaml'):
-    with open('./reuse/substitutions.yaml', 'r') as fd:
+if os.path.exists("./reuse/substitutions.yaml"):
+    with open("./reuse/substitutions.yaml", "r") as fd:
         myst_substitutions = yaml.safe_load(fd.read())
 
 # Add configuration for intersphinx mapping
 
-intersphinx_mapping = {
-    'starter-pack': ('https://canonical-example-product-documentation.readthedocs-hosted.com/en/latest', None)
-}
+intersphinx_mapping = {}
+
+# PDF
+
+set_modern_pdf_config = True
