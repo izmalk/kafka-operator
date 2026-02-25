@@ -10,6 +10,10 @@
 
 set -euo pipefail
 
+# shellcheck source=tests/tutorial/helpers.sh
+. "$(dirname "$0")/helpers.sh"
+enable_cmd_trace
+
 lxd init --auto
 
 # Detect the MTU of the default-route interface (already set by spread allocate).

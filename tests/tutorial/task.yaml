@@ -15,21 +15,47 @@ execute: |
   # shellcheck source=tests/tutorial/helpers.sh
   . "$SPREAD_PATH/tests/tutorial/helpers.sh"
 
+  _log ""
+  _log "[$(elapsed)] === Starting tutorial test suite ==="
+
   # -----------------------------------------------------------------------
   # 01 – Environment setup (environment.md)
   # -----------------------------------------------------------------------
+  _log ""
+  _log "[$(elapsed)] --- Starting: 01_environment.sh ---"
   bash "$SPREAD_PATH/tests/tutorial/01_environment.sh"
+  _log "[$(elapsed)] --- Completed: 01_environment.sh ---"
 
   # -----------------------------------------------------------------------
   # Future pages – uncomment as they are added:
   # -----------------------------------------------------------------------
+  # _log ""; _log "[$(elapsed)] --- Starting: 02_deploy.sh ---"
   # bash "$SPREAD_PATH/tests/tutorial/02_deploy.sh"
+  # _log "[$(elapsed)] --- Completed: 02_deploy.sh ---"
+  #
+  # _log ""; _log "[$(elapsed)] --- Starting: 03_passwords.sh ---"
   # bash "$SPREAD_PATH/tests/tutorial/03_passwords.sh"
+  # _log "[$(elapsed)] --- Completed: 03_passwords.sh ---"
+  #
+  # _log ""; _log "[$(elapsed)] --- Starting: 04_client.sh ---"
   # bash "$SPREAD_PATH/tests/tutorial/04_client.sh"
+  # _log "[$(elapsed)] --- Completed: 04_client.sh ---"
+  #
+  # _log ""; _log "[$(elapsed)] --- Starting: 05_encryption.sh ---"
   # bash "$SPREAD_PATH/tests/tutorial/05_encryption.sh"
+  # _log "[$(elapsed)] --- Completed: 05_encryption.sh ---"
+  #
+  # _log ""; _log "[$(elapsed)] --- Starting: 06_rebalance.sh ---"
   # bash "$SPREAD_PATH/tests/tutorial/06_rebalance.sh"
+  # _log "[$(elapsed)] --- Completed: 06_rebalance.sh ---"
+  #
+  # _log ""; _log "[$(elapsed)] --- Starting: 07_kafka_connect.sh ---"
   # bash "$SPREAD_PATH/tests/tutorial/07_kafka_connect.sh"
+  # _log "[$(elapsed)] --- Completed: 07_kafka_connect.sh ---"
+  #
+  # _log ""; _log "[$(elapsed)] --- Starting: 08_cleanup.sh ---"
   # bash "$SPREAD_PATH/tests/tutorial/08_cleanup.sh"
+  # _log "[$(elapsed)] --- Completed: 08_cleanup.sh ---"
 
 restore: |
   # Best-effort cleanup inside the VM (the VM itself is discarded by spread).

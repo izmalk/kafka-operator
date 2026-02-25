@@ -95,6 +95,10 @@ def build_script(input_path: Path, blocks: list[str]) -> str:
         "\n"
         "set -euo pipefail\n"
         "\n"
+        "# shellcheck source=tests/tutorial/helpers.sh\n"
+        ". \"$(dirname \"$0\")/helpers.sh\"\n"
+        "enable_cmd_trace\n"
+        "\n"
     )
     return header + "\n\n".join(blocks) + "\n"
 
