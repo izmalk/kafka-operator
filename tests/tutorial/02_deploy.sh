@@ -13,9 +13,30 @@ set -euo pipefail
 # shellcheck source=tests/tutorial/helpers.sh
 . "$SPREAD_PATH/tests/tutorial/helpers.sh"
 
-juju deploy kafka -n 3 --channel 4/edge --config roles=broker
+juju_deploy_retry kafka -n 3 --channel 4/edge --config roles=broker
 
-juju deploy kafka -n 3 --channel 4/edge --config roles=controller kraft
+# The tutorial says to wait until brokers reach "blocked" status
+# (waiting for KRaft controller). This ensures snaps are installed
+# before relation hooks fire.
+juju_wait_for_install kafka 3 --timeout 900
+
+# Give the charm's install hook time to attempt snap install (may fail due to
+# the storage-mount race condition). We'll fix it in the next step.
+sleep 60
+
+# Fix snap installation if Juju storage mount prevented it.
+fix_snap_install kafka 3
+
+juju_deploy_retry kafka -n 3 --channel 4/edge --config roles=controller kraft
+
+# Wait for controller snap installation to finish too.
+juju_wait_for_install kraft 3 --timeout 900
+
+# Same delay for kraft units.
+sleep 60
+
+# Fix snap installation on controller units too.
+fix_snap_install kraft 3
 
 juju integrate kafka:peer-cluster-orchestrator kraft:peer-cluster
 

@@ -21,9 +21,28 @@ backends:
       multipass launch --cpus "$cpus" --disk "$disk" --memory "$mem" \
         --name "$instance_name" 24.04
 
-      # Fix DNS inside the VM (systemd-resolved can mis-configure on Multipass).
+      # Add Google DNS as fallback for systemd-resolved. Don't disable resolved
+      # (snapd depends on it), just ensure it has working upstreams.
       multipass exec "$instance_name" -- \
-        sudo sh -c "echo 'DNS=8.8.8.8 8.8.4.4' >> /etc/systemd/resolved.conf && systemctl restart systemd-resolved"
+        sudo sh -c "
+          mkdir -p /etc/systemd/resolved.conf.d
+          printf '%s\n' '[Resolve]' 'DNS=8.8.8.8 8.8.4.4' 'FallbackDNS=1.1.1.1 9.9.9.9' > /etc/systemd/resolved.conf.d/dns.conf
+          systemctl restart systemd-resolved
+          sleep 2
+          # Also set DNS directly on the outbound interface for immediate effect
+          iface=\$(ip route show default | awk '/default/ {print \$5; exit}')
+          resolvectl dns \$iface 8.8.8.8 8.8.4.4 || true
+        "
+
+      # Verify DNS resolution works before proceeding.
+      for attempt in 1 2 3 4 5; do
+        if multipass exec "$instance_name" -- getent hosts api.charmhub.io >/dev/null 2>&1; then
+          echo "DNS verification passed on attempt $attempt"
+          break
+        fi
+        echo "DNS verification attempt $attempt failed, waiting 10s..."
+        sleep 10
+      done
 
       # Fix MTU: detect the outbound interface and path MTU dynamically so this
       # works on any host (PPPoE, corporate VPNs, etc. often have MTU < 1500).
@@ -42,20 +61,33 @@ backends:
         fi
       '
 
-      # Pre-install snaps while MTU is correct and we are still in the allocate
-      # phase.  On Ubuntu 24.04, /usr/sbin/lxd is a stub that triggers a snap
-      # install when first invoked; doing it here avoids races inside the test.
-      multipass exec "$instance_name" -- \
-        sudo snap install lxd --channel=5.21/stable
+      # Pre-install snaps. Retry up to 3 times for transient network issues.
+      for attempt in 1 2 3; do
+        multipass exec "$instance_name" -- \
+          sudo snap install lxd --channel=5.21/stable && break
+        echo "LXD snap install attempt $attempt failed, retrying in 15s..."
+        sleep 15
+      done
 
-      # LXD's snap install triggers a snapd restart and sets up network bridges
-      # (lxdbr0) that can disrupt systemd-resolved.  Re-apply DNS before the
-      # next snap download to avoid lookup timeouts.
-      multipass exec "$instance_name" -- \
-        sudo systemctl restart systemd-resolved
+      # Brief pause for snapd to settle after LXD install.
+      sleep 5
 
+      for attempt in 1 2 3; do
+        multipass exec "$instance_name" -- \
+          sudo snap install juju --channel=3/stable && break
+        echo "Juju snap install attempt $attempt failed, retrying in 15s..."
+        sleep 15
+      done
+
+      # Install yq (used by the tutorial to parse YAML output from juju).
       multipass exec "$instance_name" -- \
-        sudo snap install juju --channel=3/stable
+        sudo snap install yq
+
+      # Pre-download the charmed-kafka snap so it can be sideloaded into LXD
+      # containers, which often have unreliable network access.
+      multipass exec "$instance_name" -- \
+        sudo sh -c "mkdir -p /root/snap-cache && cd /root/snap-cache && snap download charmed-kafka --channel=4/edge" || \
+        echo "WARNING: snap pre-download failed; will try online install as fallback"
 
       # Allow root SSH login so Spread can connect.
       multipass exec "$instance_name" -- \

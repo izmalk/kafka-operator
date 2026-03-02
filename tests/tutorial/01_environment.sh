@@ -23,10 +23,9 @@ if ! lxc network show lxdbr0 > /dev/null 2>&1; then
 fi
 lxc network set lxdbr0 ipv6.address none
 lxc network set lxdbr0 bridge.mtu "$_mtu"
-# Tell LXD's dnsmasq on lxdbr0 to forward all queries to Google's resolvers
-# so that containers (including the Juju controller) get reliable DNS
-# regardless of the state of systemd-resolved on the outer VM.
-lxc network set lxdbr0 raw.dnsmasq $'server=8.8.8.8\nserver=8.8.4.4'
+# Tell LXD's dnsmasq on lxdbr0 to bypass the local stub resolver (no-resolv)
+# and forward all DNS queries directly to Google DNS.
+lxc network set lxdbr0 raw.dnsmasq $'no-resolv\nserver=8.8.8.8\nserver=8.8.4.4'
 
 # Pin the LXD default profile to lxdbr0 with an explicit MTU.
 # This prevents Juju's bootstrap from switching containers to the ubuntu-fan
@@ -37,7 +36,25 @@ lxc profile device add default eth0 nic nictype=bridged parent=lxdbr0 mtu="$_mtu
 
 sudo snap install juju || snap list juju
 
-juju bootstrap localhost overlord
+# Verify DNS is working before bootstrap (the controller inside LXD needs it).
+for _dns_attempt in 1 2 3 4 5; do
+  getent hosts api.charmhub.io >/dev/null 2>&1 && break
+  echo "DNS check attempt $_dns_attempt failed, waiting 10s..."
+  sleep 10
+done
+
+# Bootstrap with retry: if bootstrap fails (often DNS-related), clean up and retry.
+for _bs_attempt in 1 2 3; do
+  if juju bootstrap localhost overlord; then
+    break
+  fi
+  echo "Bootstrap attempt $_bs_attempt failed. Cleaning up and retrying in 30s..."
+  # Destroy any partial controller
+  juju destroy-controller overlord --destroy-all-models --no-prompt 2>/dev/null || true
+  # Also remove any leftover LXD containers from the failed bootstrap
+  lxc list --format=csv -c n | grep "^juju-" | xargs -r -I{} lxc delete --force {} 2>/dev/null || true
+  sleep 30
+done
 
 lxc list
 
