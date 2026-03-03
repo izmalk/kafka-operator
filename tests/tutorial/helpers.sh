@@ -87,3 +87,40 @@ except Exception:
     juju status
     return 1
 }
+
+# ---------------------------------------------------------------------------
+# Stage-completion tracking – fail-fast vs continue
+#
+# TUTORIAL_ABORT_ON_FAILURE (default: 1)
+#   1 – abort immediately if a required stage did not pass.
+#   0 – continue: print a warning and run the stage anyway.
+#
+# mark_stage_passed STAGE_NAME
+#   Call this after a stage script finishes successfully.
+#   Creates a marker file in TUTORIAL_STAGE_DIR.
+#
+# require_stage_passed STAGE_NAME
+#   Call this at the start of a stage that depends on STAGE_NAME.
+#   Checks for the marker file and either aborts (fail-fast) or warns (continue).
+# ---------------------------------------------------------------------------
+TUTORIAL_STAGE_DIR="${TUTORIAL_STAGE_DIR:-/tmp/spread-tutorial-stages}"
+
+mark_stage_passed() {
+    local stage="$1"
+    mkdir -p "$TUTORIAL_STAGE_DIR"
+    touch "$TUTORIAL_STAGE_DIR/${stage}.done"
+    echo "[spread] Stage '${stage}' marked as passed."
+}
+
+require_stage_passed() {
+    local stage="$1"
+    local marker="${TUTORIAL_STAGE_DIR}/${stage}.done"
+    if [[ ! -f "$marker" ]]; then
+        if [[ "${TUTORIAL_ABORT_ON_FAILURE:-1}" == "1" ]]; then
+            echo "[spread] ABORT: required stage '${stage}' did not complete successfully. Aborting." >&2
+            exit 1
+        else
+            echo "[spread] WARNING: required stage '${stage}' did not complete successfully. Continuing anyway." >&2
+        fi
+    fi
+}

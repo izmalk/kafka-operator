@@ -88,6 +88,12 @@ suites:
     summary: Charmed Apache Kafka tutorial
     systems:
       - ubuntu-24.04-64
+    # TUTORIAL_ABORT_ON_FAILURE controls behaviour when a stage dependency is missing:
+    #   1 (default) – abort the stage immediately.
+    #   0           – print a warning and run the stage anyway.
+    # Override on the command line: TUTORIAL_ABORT_ON_FAILURE=0 spread multipass:
+    environment:
+      TUTORIAL_ABORT_ON_FAILURE: "1"
     prepare: |
       # Juju's strictly-confined snap requires ~/.local/share/juju to exist when run as root.
       mkdir -p /root/.local/share/juju

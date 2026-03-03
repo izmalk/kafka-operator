@@ -5,4 +5,7 @@ priority: 100
 kill-timeout: 40m
 
 execute: |
+  . "$SPREAD_PATH/tests/tutorial/helpers.sh"
+  require_stage_passed "02_deploy"
   bash "$SPREAD_PATH/tests/tutorial/03_client.sh"
+  mark_stage_passed "03_client"
