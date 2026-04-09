@@ -354,10 +354,6 @@ Each Kafka Connect integrator application needs at least two relations:
 
 Integrate both Kafka Connect and PostgreSQL with the `postgresql-connect-integrator` charm:
 
-<!-- test:run
-juju wait-for unit postgresql-connect-integrator/0 --query='workload-status == "blocked"' --timeout 5m
--->
-
 ```shell
 juju integrate postgresql-connect-integrator postgresql
 juju integrate postgresql-connect-integrator kafka-connect
