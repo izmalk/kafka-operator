@@ -4,6 +4,11 @@ myst:
     description: "Connect client applications to Charmed Apache Kafka using Data Integrator charm - automatic user management and credential rotation."
 ---
 
+<!-- test:spread
+priority: 100
+kill-timeout: 40m
+-->
+
 (tutorial-integrate-with-client-applications)=
 # 3. Integrate with client applications
 
@@ -38,7 +43,7 @@ integrate it to the Charmed Apache Kafka:
 juju integrate data-integrator kafka
 ```
 
-<!-- test:juju-wait --timeout 600 -->
+<!-- test:await-idle --timeout 600 -->
 
 Wait for the status to become `active`/`idle` with the
 `watch juju status --color` command.
@@ -114,6 +119,10 @@ KAFKA_PASSWORD: password
 KAFKA_ENDPOINTS: endpoints
 -->
 
+<!-- test:assert
+test -n "${KAFKA_USERNAME}" && test -n "${KAFKA_PASSWORD}" && test -n "${KAFKA_ENDPOINTS}"
+-->
+
 ## Non-charmed applications
 
 We will now use the username and password to produce some messages to Apache Kafka.
@@ -127,7 +136,7 @@ juju deploy kafka-test-app --channel edge
 
 Wait for the charm to become `active`/`idle`, and log into the container:
 
-<!-- test:juju-wait --timeout 600 -->
+<!-- test:await-idle --timeout 600 -->
 
 ```bash
 juju ssh kafka-test-app/0 /bin/bash
@@ -251,7 +260,7 @@ with Apache Kafka:
 juju integrate kafka-test-app kafka
 ```
 
-<!-- test:juju-wait --timeout 600 -->
+<!-- test:await-idle --timeout 600 -->
 
 ```{note}
 This will both take care of creating a dedicated user (as was done for the `data-integrator`)
@@ -320,7 +329,7 @@ you can just remove the relation:
 juju remove-relation kafka-test-app kafka
 ```
 
-<!-- test:juju-wait --timeout 600 -->
+<!-- test:await-idle --timeout 600 -->
 
 ### Consuming messages
 
@@ -336,7 +345,7 @@ After configuring the Apache Kafka Test App, just relate it again with the Charm
 juju integrate kafka-test-app kafka
 ```
 
-<!-- test:juju-wait --timeout 600 -->
+<!-- test:await-idle --timeout 600 -->
 
 This will again create a new user and start the consumer process.
 You can check progress with `juju status`.
@@ -349,7 +358,7 @@ as we won't need them anymore.
 juju remove-application kafka-test-app --destroy-storage --no-prompt
 ```
 
-<!-- test:juju-wait --timeout 600 -->
+<!-- test:await-idle --timeout 600 -->
 
 ## What's next?
 
