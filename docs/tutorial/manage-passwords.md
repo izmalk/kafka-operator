@@ -189,8 +189,8 @@ tutorial  overlord    localhost/localhost  3.6.13   unsupported  17:12:02Z
 
 App              Version  Status   Scale  Charm            Channel        Rev  Exposed  Message
 data-integrator           blocked      1  data-integrator  latest/stable  180  no       Please relate the data-integrator with the desired product
-kafka            4.0.0    active       3  kafka            4/edge         245  no       
-kraft            4.0.0    active       3  kafka            4/edge         245  no       
+kafka            4.0.0    active       3  kafka            4/stable         245  no       
+kraft            4.0.0    active       3  kafka            4/stable         245  no       
 
 Unit                Workload  Agent      Machine  Public address  Ports           Message
 data-integrator/0*  blocked   idle       6        10.109.154.254                  Please relate the data-integrator with the desired product

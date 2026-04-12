@@ -14,7 +14,7 @@ kill-timeout: 30m
 
 This is a part of the [Charmed Apache Kafka Tutorial](index.md).
 
-To deploy Charmed Apache Kafka, all you need to do is run the following commands, which will automatically fetch [Apache Kafka](https://charmhub.io/kafka?channel=4/edge) from [Charmhub](https://charmhub.io/) and deploy it to your model.
+To deploy Charmed Apache Kafka, all you need to do is run the following commands, which will automatically fetch [Apache Kafka](https://charmhub.io/kafka?channel=4/stable) from [Charmhub](https://charmhub.io/) and deploy it to your model.
 
 Charmed Apache Kafka can run both with `roles=broker` and/or `roles=controller`. With this configuration option, the charm can be deployed either as a single application running both Apache Kafka brokers and KRaft controllers, or as multiple applications with a separate controller cluster and broker cluster.
 
@@ -22,7 +22,7 @@ For this tutorial, we will deploy brokers separately.
 To deploy a cluster of three Apache Kafka brokers:
 
 ```shell
-juju deploy kafka -n 3 --channel 4/edge --config roles=broker
+juju deploy kafka -n 3 --channel 4/stable --config roles=broker
 ```
 
 Juju will now fetch Charmed Apache Kafka and begin deploying it to the LXD cloud.
@@ -46,7 +46,7 @@ between the two solutions, please refer to the
 To deploy a cluster of three KRaft controllers, run:
 
 ```shell
-juju deploy kafka -n 3 --channel 4/edge --config roles=controller kraft
+juju deploy kafka -n 3 --channel 4/stable --config roles=controller kraft
 ```
 
 After this, it is necessary to connect the two deployed applications,

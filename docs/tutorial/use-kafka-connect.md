@@ -52,8 +52,8 @@ tutorial  overlord    localhost/localhost  3.6.13   unsupported  18:27:29Z
 
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
 data-integrator                    active      1  data-integrator           latest/stable  180  no       
-kafka                     4.0.0    active      3  kafka                     4/edge         245  no       
-kraft                     4.0.0    active      3  kafka                     4/edge         245  no       
+kafka                     4.0.0    active      3  kafka                     4/stable         245  no       
+kraft                     4.0.0    active      3  kafka                     4/stable         245  no       
 self-signed-certificates           active      1  self-signed-certificates  1/stable       317  no       
 
 Unit                         Workload  Agent  Machine  Public address  Ports           Message
@@ -167,9 +167,9 @@ tutorial  overlord    localhost/localhost  3.6.13   unsupported  18:51:59Z
 
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
 data-integrator                    active      1  data-integrator           latest/stable  180  no       
-kafka                     4.0.0    active      3  kafka                     4/edge         245  no       
+kafka                     4.0.0    active      3  kafka                     4/stable         245  no       
 kafka-connect                      active      1  kafka-connect             latest/edge     30  no       
-kraft                     4.0.0    active      3  kafka                     4/edge         245  no       
+kraft                     4.0.0    active      3  kafka                     4/stable         245  no       
 opensearch                         active      1  opensearch                2/stable       314  no       
 postgresql                14.20    active      1  postgresql                14/stable      987  no       
 self-signed-certificates           active      1  self-signed-certificates  1/stable       317  no       

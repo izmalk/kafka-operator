@@ -56,8 +56,8 @@ tutorial  overlord    localhost/localhost  3.6.13   unsupported  12:50:51Z
 
 App              Version  Status  Scale  Charm            Channel        Rev  Exposed  Message
 data-integrator           active      1  data-integrator  latest/stable  180  no       
-kafka            4.0.0    active      3  kafka            4/edge         245  no       
-kraft            4.0.0    active      3  kafka            4/edge         245  no       
+kafka            4.0.0    active      3  kafka            4/stable         245  no       
+kraft            4.0.0    active      3  kafka            4/stable         245  no       
 
 Unit                Workload  Agent      Machine  Public address  Ports           Message
 data-integrator/0*  active    idle       6        10.109.154.254                  
@@ -282,9 +282,9 @@ tutorial  overlord    localhost/localhost  3.6.13   unsupported  14:27:10Z
 
 App              Version  Status  Scale  Charm            Channel        Rev  Exposed  Message
 data-integrator           active      1  data-integrator  latest/stable  180  no       
-kafka            4.0.0    active      3  kafka            4/edge         245  no       
+kafka            4.0.0    active      3  kafka            4/stable         245  no       
 kafka-test-app            active      1  kafka-test-app   latest/edge     15  no       Topic TOP-PICK enabled with process producer
-kraft            4.0.0    active      3  kafka            4/edge         245  no       
+kraft            4.0.0    active      3  kafka            4/stable         245  no       
 
 Unit                Workload  Agent      Machine  Public address  Ports           Message
 data-integrator/0*  active    idle       6        10.109.154.254                  
