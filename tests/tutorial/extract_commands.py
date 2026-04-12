@@ -41,22 +41,12 @@ _SHELL_OPEN = re.compile(r"^```shell\s*$")
 _FENCE_CLOSE = re.compile(r"^```\s*$")
 
 
-def _seconds_to_go_duration(seconds: int) -> str:
-    """Convert seconds to Go duration format (e.g. 600 -> '10m', 90 -> '1m30s')."""
-    if seconds <= 0:
-        return "10m"
-    m, s = divmod(seconds, 60)
-    if s == 0:
-        return f"{m}m"
-    return f"{m}m{s}s"
-
-
 def _build_await_idle_command(args_str: str) -> str:
-    """Build a ``juju wait-for model`` command with a juju-status fallback.
+    """Build a ``_wait_idle`` polling call.
 
-    ``juju wait-for model`` occasionally misses state transitions in Juju 3.6.x.
-    If it times out, we run a single ``juju status`` check — if the model is
-    already in the desired state the wait succeeds anyway.
+    ``juju wait-for model`` with forEach queries is broken in Juju 3.6.x —
+    it never detects the model reaching the desired state.  Instead we poll
+    ``_check_idle`` (juju status --format json) every 10 seconds.
     """
     timeout = 1200
     allow_blocked: list[str] = []
@@ -73,21 +63,8 @@ def _build_await_idle_command(args_str: str) -> str:
         else:
             i += 1
 
-    duration = _seconds_to_go_duration(timeout)
-
-    if allow_blocked:
-        app_conditions = " || ".join(f'app.name == "{name}"' for name in allow_blocked)
-        query = f'forEach(applications, app => app.status == "active" || {app_conditions})'
-    else:
-        query = 'forEach(applications, app => app.status == "active")'
-
     blocked_args = " ".join(allow_blocked)
-
-    return (
-        "sleep 3\n"
-        f"juju wait-for model tutorial --query='{query}' --timeout {duration}"
-        f" || _check_idle {blocked_args}"
-    )
+    return f"_wait_idle {timeout} {blocked_args}".rstrip()
 
 
 def _parse_set_variables_block(
@@ -317,9 +294,8 @@ def build_script(input_path: Path, blocks: list[str]) -> str:
         "# Spread SSHs in as root but does not always set HOME=/root.\n"
         "export HOME=/root\n"
         "\n"
-        "# Fallback for juju wait-for: verify via juju status that all agents\n"
-        "# are idle and all app statuses are active (or in the allow-blocked list).\n"
-        "# Called automatically when juju wait-for times out.\n"
+        "# Check model health: all agents idle, all app statuses active\n"
+        "# (allow-blocked apps are patched to 'active' before the check).\n"
         "_check_idle() {\n"
         '  local _j; _j=$(juju status --format json)\n'
         '  echo "$_j" | jq -e \\\n'
@@ -330,6 +306,19 @@ def build_script(input_path: Path, blocks: list[str]) -> str:
         '  echo "$_j" | jq -e \\\n'
         "    '[.applications[].\"application-status\".current] | all(. == \"active\")' \\\n"
         "    > /dev/null || { echo 'FAIL: not all apps active' >&2; juju status; return 1; }\n"
+        "}\n"
+        "\n"
+        "# Poll _check_idle every 10s until the model settles or timeout expires.\n"
+        "# juju wait-for model with forEach queries is broken in Juju 3.6.x.\n"
+        "_wait_idle() {\n"
+        "  local _timeout=${1:-1200}; shift\n"
+        '  local _end=$(( $(date +%s) + _timeout ))\n'
+        '  while [ "$(date +%s)" -lt "$_end" ]; do\n'
+        '    if _check_idle "$@" 2>/dev/null; then return 0; fi\n'
+        '    sleep 10\n'
+        "  done\n"
+        '  echo "TIMEOUT: model not idle/active after ${_timeout}s" >&2\n'
+        '  _check_idle "$@"\n'
         "}\n"
         "\n"
     )

@@ -360,7 +360,7 @@ as we won't need them anymore.
 juju remove-application kafka-test-app --destroy-storage --no-prompt
 ```
 
-<!-- test:await-idle --timeout 1200 -->
+<!-- test:await-idle --timeout 1200 --allow-blocked kafka-test-app -->
 
 ## What's next?
 
