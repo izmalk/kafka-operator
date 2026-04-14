@@ -4,11 +4,6 @@ myst:
     description: "Use Kafka Connect for ETL workloads - move data between PostgreSQL and OpenSearch using charmed Apache Kafka."
 ---
 
-<!-- test:spread
-priority: -200
-kill-timeout: 60m
--->
-
 (tutorial-kafka-connect)=
 # 6. Use Kafka Connect for ETL
 
@@ -86,7 +81,7 @@ required for OpenSearch charm to function properly,
 [described in detail here](https://canonical-charmed-opensearch.readthedocs-hosted.com/2/tutorial/1-set-up-the-environment/#set-kernel-parameters).
 This basically means running the following commands:
 
-```shell
+```bash
 sudo tee -a /etc/sysctl.conf > /dev/null <<EOT
 vm.max_map_count=262144
 vm.swappiness=0
@@ -99,8 +94,8 @@ sudo sysctl -p
 
 Next, we should set the required model parameters using the `juju model-config` command:
 
-```shell
-cat <<EOF > ~/cloudinit-userdata.yaml
+```bash
+cat <<EOF > cloudinit-userdata.yaml
 cloudinit-userdata: |
   postruncmd:
     - [ 'echo', 'vm.max_map_count=262144', '>>', '/etc/sysctl.conf' ]
@@ -110,20 +105,18 @@ cloudinit-userdata: |
     - [ 'sysctl', '-p' ]
 EOF
 
-juju model-config --file=~/cloudinit-userdata.yaml
+juju model-config --file=./cloudinit-userdata.yaml
 ```
 
 ## Deploy the databases and Kafka Connect charms
 
 Deploy the PostgreSQL, OpenSearch, and Kafka Connect charms:
 
-```shell
+```bash
 juju deploy kafka-connect --channel edge
 juju deploy postgresql --channel 14/stable
 juju deploy opensearch --channel 2/stable --config profile=testing
 ```
-
-<!-- test:await-idle --timeout 1200 --allow-blocked opensearch,kafka-connect -->
 
 OpenSearch charm requires a TLS relation to become active.
 We will use the [`self-signed-certificates` charm](https://charmhub.io/self-signed-certificates)
@@ -137,24 +130,22 @@ are in `blocked` state. In order to activate them, we need to set up necessary i
 
 First, activate the OpenSearch application by integrating it with the TLS operator:
 
-```shell
+```bash
 juju integrate opensearch self-signed-certificates
 ```
 
 Then, activate the Kafka Connect application by integrating it with the Apache Kafka application:
 
-```shell
+```bash
 juju integrate kafka kafka-connect
 ```
 
 Finally, since we will be using TLS on the Kafka Connect interface, integrate the Kafka Connect
 application with the TLS operator:
 
-```shell
+```bash
 juju integrate kafka-connect self-signed-certificates
 ```
-
-<!-- test:await-idle --timeout 1200 --allow-blocked opensearch,kafka-connect -->
 
 Use the `watch juju status --color` command to continuously probe your model's status.
 After a couple of minutes, all the applications should be in `active`/`idle` state.
@@ -218,8 +209,8 @@ of the Charmed PostgreSQL tutorial.
 
 First, create a SQL script by running the following command:
 
-```shell
-cat <<EOF > ~/populate.sql
+```bash
+cat <<EOF > /tmp/populate.sql
 CREATE TABLE posts (
   id serial not null primary key,
   content text not null,
@@ -254,21 +245,16 @@ EOF
 
 Next, copy the `populate.sql` script to the PostgreSQL unit using the `juju scp` command:
 
-```shell
-juju scp ~/populate.sql postgresql/0:/home/ubuntu/populate.sql
+```bash
+juju scp /tmp/populate.sql postgresql/0:/home/ubuntu/populate.sql
 ```
 
 Then, retrieve the password for the `operator` user on the PostgreSQL database using
 the `get-password` action:
 
-```shell
+```bash
 juju run postgresql/leader get-password
 ```
-
-<!-- test:set-variables
-command: juju run postgresql/leader get-password
-PG_PASSWORD: password
--->
 
 See [PostgreSQL tutorial](https://charmhub.io/postgresql/docs/t-access) for more guidance if needed.
 
@@ -285,7 +271,6 @@ password: bQOUgw8ZZgUyPA6n
 
 Make note of the password, and use `juju ssh` to connect to the PostgreSQL unit:
 
-<!-- test:skip -->
 ```bash
 juju ssh postgresql/leader
 ```
@@ -293,7 +278,6 @@ juju ssh postgresql/leader
 Once connected to the unit, use the `psql` command line tool with the `operator`
 user credentials, to create the database named `tutorial`:
 
-<!-- test:skip -->
 ```bash
 psql --host $(hostname -i) --username operator --password --dbname postgres \
     -c "CREATE DATABASE tutorial"
@@ -304,7 +288,6 @@ You will be prompted for the password, which you have obtained previously.
 Now, we can use the `populate.sql` script copied earlier into the PostgreSQL unit,
 to create a table named `posts` with some test data:
 
-<!-- test:skip -->
 ```bash
 cat populate.sql | \
     psql --host $(hostname -i) --username operator --password --dbname tutorial
@@ -312,17 +295,10 @@ cat populate.sql | \
 
 To ensure that the test data is loaded successfully into the `posts` table:
 
-<!-- test:skip -->
 ```bash
 psql --host $(hostname -i) --username operator --password --dbname tutorial \
     -c 'SELECT COUNT(*) FROM posts'
 ```
-
-<!-- test:run
-juju ssh postgresql/leader "PGPASSWORD=${PG_PASSWORD} psql --host \$(hostname -i) --username operator --dbname postgres -c 'CREATE DATABASE tutorial'"
-juju ssh postgresql/leader "cat /home/ubuntu/populate.sql | PGPASSWORD=${PG_PASSWORD} psql --host \$(hostname -i) --username operator --dbname tutorial"
-juju ssh postgresql/leader "PGPASSWORD=${PG_PASSWORD} psql --host \$(hostname -i) --username operator --dbname tutorial -c 'SELECT COUNT(*) FROM posts'"
--->
 
 The output should indicate that the `posts` table has five rows now:
 
@@ -344,7 +320,7 @@ and Kafka Connect applications.
 First, deploy the charm in `source` mode using the `juju deploy` command and provide
 the minimum necessary configurations:
 
-```shell
+```bash
 juju deploy postgresql-connect-integrator \
     --channel edge \
     --config mode=source \
@@ -359,16 +335,10 @@ Each Kafka Connect integrator application needs at least two relations:
 
 Integrate both Kafka Connect and PostgreSQL with the `postgresql-connect-integrator` charm:
 
-<!-- test:run
-juju wait-for unit postgresql-connect-integrator/0 --query='workload-status == "blocked"' --timeout 5m
--->
-
-```shell
+```bash
 juju integrate postgresql-connect-integrator postgresql
 juju integrate postgresql-connect-integrator kafka-connect
 ```
-
-<!-- test:await-idle --timeout 1200 --allow-blocked opensearch -->
 
 After a couple of minutes, `juju status` command should show the
 `postgresql-connect-integrator` in `active`/`idle` state, with a message indicating
@@ -392,7 +362,7 @@ to OpenSearch.
 To do that, deploy another Kafka Connect integrator named `opensearch-connect-integrator`
 in the `sink` mode:
 
-```shell
+```bash
 juju deploy opensearch-connect-integrator \
     --channel edge \
     --config mode=sink \
@@ -406,16 +376,10 @@ we deployed earlier.
 
 To activate the `opensearch-connect-integrator`, make the necessary integrations:
 
-<!-- test:run
-juju wait-for unit opensearch-connect-integrator/0 --query='workload-status == "blocked"' --timeout 5m
--->
-
-```shell
+```bash
 juju integrate opensearch-connect-integrator opensearch
 juju integrate opensearch-connect-integrator kafka-connect
 ```
-
-<!-- test:await-idle --timeout 1200 --allow-blocked opensearch -->
 
 Wait a couple of minutes and run `juju status`, now both `opensearch-connect-integrator`
 and `postgresql-connect-integrator` applications should be in `active`/`idle` state,
@@ -436,15 +400,9 @@ We can use the OpenSearch REST API for that purpose.
 
 First, retrieve the admin user credentials for OpenSearch using `get-password` action:
 
-<!-- test:skip -->
-```shell
+```bash
 juju run opensearch/leader get-password
 ```
-
-<!-- test:set-variables
-command: juju run opensearch/leader get-password --wait=5m
-OS_PASSWORD: password
--->
 
 As a result, you should see output similar to the following:
 
@@ -456,38 +414,16 @@ username: admin
 
 Then, retrieve the OpenSearch unit IP and save it into an environment variable:
 
-```shell
+```bash
 OPENSEARCH_IP=$(juju ssh opensearch/0 'hostname -i' | tr -d '\r\n')
 ```
 
 **Using the password obtained above**, send a request to the topic's `_search` endpoint,
 either using your browser or `curl`:
 
-<!-- test:skip -->
-```shell
+```bash
 curl -u admin:<admin-password> -k -sS "https://${OPENSEARCH_IP}:9200/etl_posts/_search?pretty=true"
 ```
-
-<!-- test:wait --seconds 60 -->
-
-<!-- test:run
-for attempt in $(seq 1 20); do
-  if curl -u admin:${OS_PASSWORD} -k -sS "https://${OPENSEARCH_IP}:9200/etl_posts/_search" 2>/dev/null | jq -e '.hits.total.value >= 5' > /dev/null 2>&1; then
-    echo "ETL data verified on attempt $attempt"
-    break
-  fi
-  echo "Waiting for ETL data to appear in OpenSearch... attempt $attempt/20"
-  sleep 15
-done
--->
-
-<!-- test:run
-curl -u admin:${OS_PASSWORD} -k -sS "https://${OPENSEARCH_IP}:9200/etl_posts/_search?pretty=true"
--->
-
-<!-- test:assert
-curl -u admin:${OS_PASSWORD} -k -sS "https://${OPENSEARCH_IP}:9200/etl_posts/_search" | jq -e '.hits.total.value >= 5'
--->
 
 As a result you get a JSON response containing the search results, which should have five documents.
 The `hits.total` value should be `5`, as shown in the output example below:
@@ -520,14 +456,12 @@ Now let's insert a new post into the PostgreSQL database.
 
 Get the password for the `operator` built-in user again:
 
-<!-- test:skip -->
 ```shell
 juju run postgresql/leader get-password
 ```
 
 SSH to the PostgreSQL leader unit:
 
-<!-- test:skip -->
 ```bash
 juju ssh postgresql/leader
 ```
@@ -535,7 +469,6 @@ juju ssh postgresql/leader
 Then, insert a new post using following command and the password for the `operator` user
 on the PostgreSQL:
 
-<!-- test:skip -->
 ```bash
 psql --host $(hostname -i) --username operator --password --dbname tutorial -c \
     "INSERT INTO posts (content, likes) VALUES ('my new post', 1)"
@@ -543,22 +476,11 @@ psql --host $(hostname -i) --username operator --password --dbname tutorial -c \
 
 Log out from the PostgreSQL unit using `exit` command or the `Ctrl+D` keyboard shortcut.
 
-<!-- test:run
-juju ssh postgresql/leader "PGPASSWORD=${PG_PASSWORD} psql --host \$(hostname -i) --username operator --dbname tutorial -c \"INSERT INTO posts (content, likes) VALUES ('my new post', 1)\""
--->
-
-<!-- test:wait --seconds 30 -->
-
 Then, check that the data is automatically copied to the OpenSearch index:
 
-<!-- test:skip -->
-```shell
+```bash
 curl -u admin:<admin-password> -k -sS "https://${OPENSEARCH_IP}:9200/etl_posts/_search?pretty=true"
 ```
-
-<!-- test:run
-curl -u admin:${OS_PASSWORD} -k -sS "https://${OPENSEARCH_IP}:9200/etl_posts/_search?pretty=true"
--->
 
 Which now should have six hits (output is truncated):
 

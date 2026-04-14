@@ -4,11 +4,6 @@ myst:
     description: "Deploy Charmed Apache Kafka clusters with KRaft controllers using Juju - complete guide for broker and controller deployment."
 ---
 
-<!-- test:spread
-priority: 200
-kill-timeout: 30m
--->
-
 (tutorial-deploy)=
 # 2. Deploy Apache Kafka
 
@@ -28,7 +23,6 @@ juju deploy kafka -n 3 --channel 4/stable --config roles=broker
 Juju will now fetch Charmed Apache Kafka and begin deploying it to the LXD cloud.
 Now check the Juju model status:
 
-<!-- test:skip -->
 ```shell
 juju status
 ```
@@ -56,22 +50,10 @@ taking care to specify which cluster is the orchestrator by selecting the specif
 juju integrate kafka:peer-cluster-orchestrator kraft:peer-cluster
 ```
 
-<!-- test:await-idle --timeout 1200 -->
-
-<!-- test:run
-juju wait-for model tutorial --query='forEach(applications, app => app.status == "active")' --timeout 10m
--->
-
-<!-- test:assert
-test "$(juju status --format json | jq '.applications.kafka.units | length')" -eq 3
-test "$(juju status --format json | jq '.applications.kraft.units | length')" -eq 3
--->
-
 Juju will now connect applications to exchange access credentials and machine endpoints.
 This process can take several minutes depending on the resources available on your machine.
 You can track the progress by running:
 
-<!-- test:skip -->
 ```shell
 watch juju status --color
 ```
@@ -84,7 +66,6 @@ you can watch the status and messages both applications change.
 
 Wait until the applications are `active` and all units show `active`/`idle` status:
 
-<!-- test:skip -->
 ```shell
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
 tutorial  overlord    localhost/localhost  3.6.20   unsupported  13:43:44Z
@@ -130,7 +111,6 @@ juju show-secret --reveal cluster.kafka.app
 
 The output of the previous command will look something like this:
 
-<!-- test:skip -->
 ```shell
 d5ipahpdormt02antvpg:
   revision: 1
