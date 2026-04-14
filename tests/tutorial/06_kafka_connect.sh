@@ -1,17 +1,48 @@
 #!/bin/bash
-# Extracted from : docs/tutorial/use-kafka-connect.md
-# Regenerate with: python3 tests/tutorial/extract_commands.py docs/tutorial/use-kafka-connect.md <output.sh>
+# Self-contained tutorial stage 6 – Use Kafka Connect for ETL.
 #
-# To skip a block in the Markdown source, add this comment on the line
-# immediately before its opening fence (blank lines are fine between them):
-#   <!-- test:skip -->
+# Includes the minimal prerequisites from stages 01 (environment),
+# 02 (deploy) and 05 (encryption) so this test can run independently.
 #
-# Only ```shell fences are extracted; use any other tag to naturally exclude a block.
+# Original tutorial source: docs/tutorial/use-kafka-connect.md
 
 set -euo pipefail
 
 # shellcheck source=tests/tutorial/helpers.sh
 . "$SPREAD_PATH/tests/tutorial/helpers.sh"
+
+# ── Prerequisites from stage 01: Environment ─────────────────────────────────
+
+lxd init --auto
+lxc network set lxdbr0 ipv6.address none
+
+sudo snap install yq
+sudo snap install jq
+
+juju bootstrap localhost overlord
+
+juju add-model tutorial
+
+# ── Prerequisites from stage 02: Deploy Kafka + KRaft ────────────────────────
+
+juju deploy kafka -n 3 --channel 4/edge --config roles=broker
+
+juju deploy kafka -n 3 --channel 4/edge --config roles=controller kraft
+
+juju integrate kafka:peer-cluster-orchestrator kraft:peer-cluster
+
+juju_wait --timeout 900
+
+# ── Prerequisites from stage 05: Deploy TLS certificates ─────────────────────
+# Stage 05 deploys self-signed-certificates and temporarily integrates it with
+# kafka, but removes that relation at the end.  Stage 06 only needs the charm
+# to be deployed (opensearch and kafka-connect will integrate with it).
+
+juju deploy self-signed-certificates --config ca-common-name="Tutorial CA"
+
+juju_wait --timeout 600
+
+# ── Stage 06: Kafka Connect ETL pipeline ─────────────────────────────────────
 
 juju status
 
