@@ -4,6 +4,11 @@ myst:
     description: "Rebalance Charmed Apache Kafka partitions using Cruise Control - optimize resource distribution when scaling brokers."
 ---
 
+<!-- test:spread
+priority: -300
+kill-timeout: 90m
+-->
+
 (tutorial-rebalance-partitions)=
 # 7. Rebalance and reassign partitions
 
@@ -48,8 +53,11 @@ Let's add the role `balancer` to the existing `kraft` Juju application:
 juju config kraft roles=balancer,controller
 ```
 
+<!-- test:await-idle --timeout 1200 --allow-blocked opensearch -->
+
 Wait for the status to become `active`/`idle`:
 
+<!-- test:skip -->
 ```shell
 watch juju status --color
 ```
@@ -58,21 +66,33 @@ watch juju status --color
 
 Let's scale-out the `kafka` application to four units (add one more):
 
-```bash
+```shell
 juju add-unit kafka
 ```
 
+<!-- test:await-idle --timeout 1200 --allow-blocked opensearch -->
+
+<!-- test:assert
+test "$(juju status --format json | jq '.applications.kafka.units | length')" -eq 4
+-->
+
 Wait for the additional unit to be fully deployed and active:
 
+<!-- test:skip -->
 ```shell
 watch juju status --color
 ```
+
+<!-- test:set-variables
+command: juju show-unit kafka/0 --format json | jq -r '."kafka/0"."public-address"' | awk '{print "unit-ip: " $1}'
+KAFKA_UNIT_IP: unit-ip
+-->
 
 By default, no partitions are allocated for the new unit `3`,
 that should have broker id `103`.
 Check that via the log directory assignment:
 
-```bash
+```shell
 juju ssh kafka/leader sudo -i charmed-kafka.log-dirs --describe \
   --bootstrap-server <unit-ip>:19093 \
   --command-config '$CONF/client.properties' \
@@ -100,8 +120,32 @@ with no partitions allocated by default:
 Now, let's run the `rebalance` action to allocate some existing partitions
 from other brokers (`0`, `1` and `2`) to broker `3`:
 
-```bash
-juju run cruise-control/0 rebalance mode=add brokerid=103 --wait=2m
+<!-- test:run
+# Cruise Control needs time to collect metrics from the cluster.  Rather than
+# a fixed sleep, retry the dryrun rebalance until CC reports ready (up to 40
+# minutes, polling every 2 minutes).
+elapsed=0
+timeout=2400
+interval=120
+echo "Waiting for Cruise Control to be ready (timeout=${timeout}s, poll=${interval}s)…"
+while [ "$elapsed" -lt "$timeout" ]; do
+  if juju run kraft/leader rebalance mode=add brokerid=103 --wait=2m 2>&1; then
+    echo "Cruise Control ready after ${elapsed}s."
+    break
+  fi
+  echo "[${elapsed}s elapsed] Cruise Control not ready – retrying in ${interval}s…"
+  sleep "$interval"
+  elapsed=$((elapsed + interval))
+done
+if [ "$elapsed" -ge "$timeout" ]; then
+  echo "ERROR: Cruise Control did not become ready within ${timeout}s"
+  exit 1
+fi
+-->
+
+<!-- test:skip -->
+```shell
+juju run kraft/leader rebalance mode=add brokerid=103 --wait=2m
 ```
 
 ```{warning}
@@ -139,26 +183,28 @@ summary:
 If we are happy with this proposal, we can re-run the action,
 but this time instructing the charm to actually execute the proposal:
 
-```bash
-juju run cruise-control/0 rebalance mode=add dryrun=false brokerid=103 --wait=10m
+```shell
+juju run kraft/leader rebalance mode=add dryrun=false brokerid=103 --wait=10m
 ```
+
+<!-- test:await-idle --timeout 1200 --allow-blocked opensearch -->
 
 Partition rebalancing can take significant time.
 To monitor the progress, in a separate terminal session, check the `juju debug-log` command output
 to see it in progress:
 
 ```text
-unit-cruise-control-0: 22:18:41 INFO unit.cruise-control/0.juju-log Waiting for task execution to finish for user_task_id='d3e426a3-6c2e-412e-804c-8a677f2678af'...
-unit-cruise-control-0: 22:18:51 INFO unit.cruise-control/0.juju-log Waiting for task execution to finish for user_task_id='d3e426a3-6c2e-412e-804c-8a677f2678af'...
-unit-cruise-control-0: 22:19:02 INFO unit.cruise-control/0.juju-log Waiting for task execution to finish for user_task_id='d3e426a3-6c2e-412e-804c-8a677f2678af'...
-unit-cruise-control-0: 22:19:12 INFO unit.cruise-control/0.juju-log Waiting for task execution to finish for user_task_id='d3e426a3-6c2e-412e-804c-8a677f2678af'...
+unit-kraft-0: 22:18:41 INFO unit.kraft/0.juju-log Waiting for task execution to finish for user_task_id='d3e426a3-6c2e-412e-804c-8a677f2678af'...
+unit-kraft-0: 22:18:51 INFO unit.kraft/0.juju-log Waiting for task execution to finish for user_task_id='d3e426a3-6c2e-412e-804c-8a677f2678af'...
+unit-kraft-0: 22:19:02 INFO unit.kraft/0.juju-log Waiting for task execution to finish for user_task_id='d3e426a3-6c2e-412e-804c-8a677f2678af'...
+unit-kraft-0: 22:19:12 INFO unit.kraft/0.juju-log Waiting for task execution to finish for user_task_id='d3e426a3-6c2e-412e-804c-8a677f2678af'...
 ...
 ```
 
 Once the action is complete, verify the partitions on the newly added unit
 using the same commands as before:
 
-```bash
+```shell
 juju ssh kafka/leader sudo -i charmed-kafka.log-dirs --describe \
   --bootstrap-server <unit-ip>:19093 \
   --command-config '$CONF/client.properties' \
@@ -206,16 +252,18 @@ replicas for a given partition.
 To remove the most recent broker unit `3` from the previous example,
 re-run the `rebalance` action with `mode=remove`:
 
-```bash
-juju run cruise-control/0 rebalance mode=remove dryrun=false brokerid=3 --wait=10m
+```shell
+juju run kraft/leader rebalance mode=remove dryrun=false brokerid=3 --wait=10m
 ```
+
+<!-- test:await-idle --timeout 1200 --allow-blocked opensearch -->
 
 This does not remove the unit, but moves the partitions from the broker on unit number `3`
 to other brokers within the cluster.
 
 Once the action has been completed, verify that broker `3` no longer has any assigned partitions:
 
-```bash
+```shell
 juju ssh kafka/leader sudo -i charmed-kafka.log-dirs --describe \
   --bootstrap-server <unit-ip>:19093 \
   --command-config '$CONF/client.properties' \
@@ -241,9 +289,11 @@ Make sure that the broker has no partitions assigned, for example:
 
 Now, it is safe to scale-in the cluster by removing the broker number `3` completely:
 
-```bash
-juju remove-unit kafka/3
+```shell
+juju remove-unit kafka/3 --no-prompt
 ```
+
+<!-- test:await-idle --timeout 1200 --allow-blocked opensearch -->
 
 ## Full cluster rebalancing
 
@@ -260,8 +310,31 @@ of partition allocation across all currently live broker units.
 To achieve this, re-run the `rebalance` action with the `mode=full`.
 You can do it in the "dryrun" mode (by default) for now:
 
-```bash
-juju run cruise-control/0 rebalance mode=full --wait=10m
+<!-- test:run
+# CC may need time to recollect metrics after the topology change.  Retry the
+# dryrun until it succeeds (up to 20 minutes, polling every 2 minutes).
+elapsed=0
+timeout=1200
+interval=120
+echo "Waiting for Cruise Control to be ready for full rebalance (timeout=${timeout}s)…"
+while [ "$elapsed" -lt "$timeout" ]; do
+  if juju run kraft/leader rebalance mode=full --wait=3m 2>&1; then
+    echo "Full rebalance dryrun succeeded after ${elapsed}s."
+    break
+  fi
+  echo "[${elapsed}s elapsed] Not ready – retrying in ${interval}s…"
+  sleep "$interval"
+  elapsed=$((elapsed + interval))
+done
+if [ "$elapsed" -ge "$timeout" ]; then
+  echo "ERROR: Cruise Control full rebalance dryrun did not succeed within ${timeout}s"
+  exit 1
+fi
+-->
+
+<!-- test:skip -->
+```shell
+juju run kraft/leader rebalance mode=full --wait=10m
 ```
 
 Looking at the bottom of the output, see the value of the `balancedness` score
@@ -277,6 +350,6 @@ summary:
 
 To implement the proposed changes, run the same command but with `dryrun=false`:
 
-```bash
-juju run cruise-control/0 rebalance mode=full dryrun=false --wait=10m
+```shell
+juju run kraft/leader rebalance mode=full dryrun=false --wait=10m
 ```
