@@ -101,3 +101,21 @@ except Exception:
     juju status
     return 1
 }
+
+# ---------------------------------------------------------------------------
+# wait_idle_jubilant – same as wait_idle but uses the jubilant Python library.
+#
+# Usage:
+#   wait_idle_jubilant [--timeout SECONDS] [--interval SECONDS]
+#                      [--allow-blocked APP1,APP2,...]
+#
+# Requires the jubilant package to be installed in the VM.
+# Delegates to wait_idle.py for type-safe, structured Juju status polling.
+#
+# Returns 0 when all units are active/idle, 1 on timeout.
+# ---------------------------------------------------------------------------
+wait_idle_jubilant() {
+    local script_dir
+    script_dir="${SPREAD_PATH:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}/tests/tutorial"
+    python3 "$script_dir/wait_idle.py" "$@"
+}

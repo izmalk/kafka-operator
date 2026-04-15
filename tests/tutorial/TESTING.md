@@ -56,6 +56,19 @@ make -f tests/tutorial/Makefile extract   # step 1
 make -f tests/tutorial/Makefile test      # steps 1+2 (abort on first failure)
 ```
 
+To use the [jubilant](https://documentation.ubuntu.com/jubilant/)-based
+`wait_idle` implementation instead of the default shell-based one:
+
+```bash
+# tox
+tox -e tutorial-extract-jubilant   # generate scripts with jubilant wait_idle
+tox -e tutorial-jubilant            # extract + spread with jubilant wait_idle
+
+# Makefile
+make -f tests/tutorial/Makefile WAIT_IDLE_IMPL=jubilant extract
+make -f tests/tutorial/Makefile WAIT_IDLE_IMPL=jubilant test
+```
+
 The `tox -e tutorial` env runs in **continue mode** (no `-abend`), executing
 all stages even if earlier ones fail. This is the mode used by CI.
 
@@ -70,6 +83,9 @@ failure — more useful during local development.
 | `tox -e tutorial-extract` / `make … extract` | —                 | Generate scripts only (no Spread run)                         |
 | `make … test`                              | `-abend -vv`        | Abort on first failure, tear down VM                          |
 | `make … test-debug`                        | `-abend -vv -debug` | Abort on first failure, drop into an interactive VM shell     |
+
+Append `-jubilant` to the tox env name (e.g. `tox -e tutorial-jubilant`) or
+set `WAIT_IDLE_IMPL=jubilant` with Make to switch the wait-idle implementation.
 
 **`test-debug`** is the most useful mode during development. When a step fails,
 Spread pauses and prints SSH credentials for the VM. You can SSH in, inspect
@@ -180,10 +196,16 @@ Emit `sleep N` at that point in the script.
 
 ### `<!-- test:await-idle --timeout S --allow-blocked APP1,APP2 -->`
 
-Emit a `wait_idle` call (from `helpers.sh`) that polls `juju status` until all
-units are `active/idle`. `--timeout` is in seconds (default: 1200).
-`--allow-blocked` lists apps permitted to be in `blocked` state
-(comma-separated).
+Emit a wait-idle call from `helpers.sh` that waits until all units are
+`active/idle`. `--timeout` is in seconds (default: 1200). `--allow-blocked`
+lists apps permitted to be in `blocked` state (comma-separated).
+
+The shell function that gets emitted depends on `--wait-idle-impl`:
+
+| `--wait-idle-impl` | Shell function         | Backend                                       |
+|--------------------|------------------------|-----------------------------------------------|
+| `shell` (default)  | `wait_idle`            | Inline `juju status --format=json` + Python   |
+| `jubilant`         | `wait_idle_jubilant`   | `wait_idle.py` using the [jubilant](https://documentation.ubuntu.com/jubilant/) library |
 
 ### `<!-- test:run-with-timeout --seconds N -->`
 

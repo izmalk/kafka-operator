@@ -19,6 +19,8 @@ backends:
         set -e
         snap install lxd --channel=5.21/stable
         snap install juju --channel=3/stable
+        apt-get update -qq && apt-get install -y -qq python3-pip
+        pip install --break-system-packages jubilant
         echo root:${SPREAD_PASSWORD} | chpasswd
         printf 'PasswordAuthentication yes\nPermitRootLogin yes\n' \
           > /etc/ssh/sshd_config.d/10-spread.conf

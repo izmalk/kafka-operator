@@ -34,6 +34,15 @@ ROOT     := $(abspath $(THIS_DIR)/../..)
 EXTRACT  := $(THIS_DIR)extract_commands.py
 
 # ---------------------------------------------------------------------------
+# Wait-idle implementation
+# ---------------------------------------------------------------------------
+# Controls which helpers.sh function is emitted for <!-- test:await-idle -->
+# annotations.  Valid values: shell (default), jubilant.
+#   make WAIT_IDLE_IMPL=jubilant extract
+WAIT_IDLE_IMPL ?= shell
+EXTRACT_FLAGS  := --wait-idle-impl $(WAIT_IDLE_IMPL)
+
+# ---------------------------------------------------------------------------
 # Script → Markdown mapping (SCRIPTS)
 # ---------------------------------------------------------------------------
 # Each entry is a colon-separated pair:  output.sh:source.md
@@ -91,7 +100,7 @@ all: $(OUTPUTS)
 # generated file headers are root-relative (see 'rel' above).
 define make_rule
 $(word 1,$(subst :, ,$(1))): $(word 2,$(subst :, ,$(1))) $(EXTRACT)
-	cd $(ROOT) && $(PYTHON) $(call rel,$(EXTRACT)) $(call rel,$(word 2,$(subst :, ,$(1)))) $(call rel,$(word 1,$(subst :, ,$(1))))
+	cd $(ROOT) && $(PYTHON) $(call rel,$(EXTRACT)) $(EXTRACT_FLAGS) $(call rel,$(word 2,$(subst :, ,$(1)))) $(call rel,$(word 1,$(subst :, ,$(1))))
 endef
 $(foreach pair,$(SCRIPTS),$(eval $(call make_rule,$(pair))))
 
@@ -108,7 +117,7 @@ $(foreach pair,$(SCRIPTS),$(eval $(call make_rule,$(pair))))
 .PHONY: extract
 extract:
 	$(foreach pair,$(SCRIPTS), \
-	    cd $(ROOT) && $(PYTHON) $(call rel,$(EXTRACT)) $(call rel,$(word 2,$(subst :, ,$(pair)))) $(call rel,$(word 1,$(subst :, ,$(pair))));)
+	    cd $(ROOT) && $(PYTHON) $(call rel,$(EXTRACT)) $(EXTRACT_FLAGS) $(call rel,$(word 2,$(subst :, ,$(pair)))) $(call rel,$(word 1,$(subst :, ,$(pair))));)
 
 # ---------------------------------------------------------------------------
 # Target: help
@@ -125,6 +134,13 @@ help:
 	@echo "  test-continue  Run all stages even if earlier ones fail"
 	@echo "  test-debug     Run with -debug: drop into a shell on failure"
 	@echo "  help      Show this help message"
+	@echo ""
+	@echo "Variables:"
+	@echo "  WAIT_IDLE_IMPL  shell (default) or jubilant"
+	@echo ""
+	@echo "Examples:"
+	@echo "  make -f tests/tutorial/Makefile WAIT_IDLE_IMPL=jubilant extract"
+	@echo "  make -f tests/tutorial/Makefile WAIT_IDLE_IMPL=jubilant test"
 	@echo ""
 #	@echo "Generated scripts:"
 #	@$(foreach pair,$(SCRIPTS), \

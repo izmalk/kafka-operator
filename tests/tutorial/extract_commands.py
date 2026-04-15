@@ -24,10 +24,17 @@ They control how blocks are extracted and what additional commands are emitted.
 See TESTING.md for full reference.
 """
 
+import argparse
 import re
 import shlex
 import sys
 from pathlib import Path
+
+# Maps --wait-idle-impl values to the shell function name emitted in scripts.
+_WAIT_IDLE_FUNCTIONS = {
+    "shell": "wait_idle",
+    "jubilant": "wait_idle_jubilant",
+}
 
 SKIP_MARKER = "<!-- test:skip -->"
 _SLEEP_PATTERN = re.compile(r"<!--\s*test:wait\s+--seconds\s+(\d+)\s*-->")
@@ -41,13 +48,14 @@ _SHELL_OPEN = re.compile(r"^```shell\s*$")
 _FENCE_CLOSE = re.compile(r"^```\s*$")
 
 
-def _build_await_idle_command(args_str: str) -> str:
-    """Build a ``wait_idle`` call from ``helpers.sh``.
+def _build_await_idle_command(args_str: str, *, func_name: str = "wait_idle") -> str:
+    """Build a wait-idle call from ``helpers.sh``.
 
-    The ``wait_idle`` function polls ``juju status`` until every unit is
-    active/idle (with optional allow-blocked exceptions).  It is more
-    reliable than ``juju wait-for model`` which occasionally misses state
-    transitions in Juju 3.6.x.
+    *func_name* controls which shell function is emitted:
+
+    * ``wait_idle`` (default) — pure-shell polling via ``juju status --format=json``.
+    * ``wait_idle_jubilant`` — delegates to ``wait_idle.py`` using the
+      jubilant library for type-safe, structured Juju status polling.
     """
     timeout = 1200
     allow_blocked: list[str] = []
@@ -64,7 +72,7 @@ def _build_await_idle_command(args_str: str) -> str:
         else:
             i += 1
 
-    parts = ["wait_idle", "--timeout", str(timeout)]
+    parts = [func_name, "--timeout", str(timeout)]
     if allow_blocked:
         parts.extend(["--allow-blocked", ",".join(allow_blocked)])
 
@@ -143,6 +151,8 @@ def _parse_run_hidden_block(
 def _handle_marker_line(
     line: str,
     blocks: list[str],
+    *,
+    wait_idle_func: str = "wait_idle",
 ) -> str | None:
     """Check *line* for a standalone annotation marker.
 
@@ -162,7 +172,7 @@ def _handle_marker_line(
     await_idle_match = _AWAIT_IDLE_PATTERN.match(stripped)
     if await_idle_match:
         args = await_idle_match.group(1).strip()
-        blocks.append(_build_await_idle_command(args))
+        blocks.append(_build_await_idle_command(args, func_name=wait_idle_func))
         return "await_idle"
 
     return None
@@ -283,13 +293,23 @@ _BLOCK_HANDLERS: list[tuple[re.Pattern[str], bool, object]] = [
 ]
 
 
-def extract_shell_blocks(source: str) -> list[str]:
+def extract_shell_blocks(
+    source: str,
+    *,
+    wait_idle_impl: str = "shell",
+) -> list[str]:
     """Return shell code block contents and generated commands from a MyST Markdown string.
 
     Each returned string is either the raw content between shell fences, a
-    ``sleep N`` line, a ``wait_idle`` command, or injected code from
-    other annotations.  Blocks marked with ``<!-- test:skip -->`` are omitted.
+    ``sleep N`` line, a ``wait_idle`` / ``wait_idle_jubilant`` command, or
+    injected code from other annotations.  Blocks marked with
+    ``<!-- test:skip -->`` are omitted.
+
+    *wait_idle_impl* selects the shell function emitted for
+    ``<!-- test:await-idle -->`` annotations: ``"shell"`` (default) for
+    ``wait_idle``, ``"jubilant"`` for ``wait_idle_jubilant``.
     """
+    wait_idle_func = _WAIT_IDLE_FUNCTIONS[wait_idle_impl]
     lines = source.splitlines()
     blocks: list[str] = []
     state = _ParseState()
@@ -299,7 +319,7 @@ def extract_shell_blocks(source: str) -> list[str]:
         line = lines[i]
 
         # Detect standalone annotation markers (skip / sleep / await_idle).
-        marker = _handle_marker_line(line, blocks)
+        marker = _handle_marker_line(line, blocks, wait_idle_func=wait_idle_func)
         if marker == "skip":
             state.skip_next = True
             i += 1
@@ -384,24 +404,41 @@ def build_task_yaml(script_path: str, heading: str, meta: dict[str, str]) -> str
 
 
 def main() -> None:
-    if len(sys.argv) < 2:
-        print(__doc__)
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description="Extract shell code blocks from MyST Markdown tutorial files.",
+    )
+    parser.add_argument(
+        "--wait-idle-impl",
+        choices=sorted(_WAIT_IDLE_FUNCTIONS),
+        default="shell",
+        dest="wait_idle_impl",
+        help=(
+            "Which helpers.sh function to emit for <!-- test:await-idle --> "
+            "annotations. 'shell' (default) uses the pure-shell wait_idle; "
+            "'jubilant' uses wait_idle_jubilant backed by the jubilant Python library."
+        ),
+    )
+    parser.add_argument("input", type=Path, help="Markdown source file")
+    parser.add_argument(
+        "output", type=Path, nargs="?", default=None,
+        help="Output .sh script path (prints to stdout if omitted)",
+    )
+    args = parser.parse_args()
 
-    input_path = Path(sys.argv[1])
+    input_path: Path = args.input
     if not input_path.exists():
         sys.exit(f"Error: {input_path} does not exist")
 
     source = input_path.read_text(encoding="utf-8")
-    blocks = extract_shell_blocks(source)
+    blocks = extract_shell_blocks(source, wait_idle_impl=args.wait_idle_impl)
 
     if not blocks:
         print(f"Warning: no shell blocks found in {input_path}", file=sys.stderr)
 
     script = build_script(input_path, blocks)
 
-    if len(sys.argv) >= 3:
-        output_path = Path(sys.argv[2])
+    if args.output is not None:
+        output_path: Path = args.output
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(script, encoding="utf-8")
         print(f"Written {len(blocks)} block(s) → {output_path}")

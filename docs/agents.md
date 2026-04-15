@@ -53,7 +53,7 @@ Test metadata is embedded as HTML comments, invisible to readers:
 
 - `<!-- test:skip -->` — skip the next shell block
 - `<!-- test:wait --seconds N -->` — emit `sleep N`
-- `<!-- test:await-idle -->` — poll `juju status` until all units are active/idle
+- `<!-- test:await-idle -->` — wait for all units to be active/idle (`shell` or `jubilant` backend)
 - `<!-- test:run -->` — hidden commands (not rendered in docs)
 - `<!-- test:assert -->` — hidden assertions
 - `<!-- test:set-variables -->` — capture command output into shell variables
