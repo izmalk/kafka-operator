@@ -25,9 +25,9 @@ juju add-model tutorial
 
 # ── Prerequisites from stage 02: Deploy Kafka + KRaft ────────────────────────
 
-juju deploy kafka -n 3 --channel 4/edge --config roles=broker
+juju deploy kafka -n 3 --channel 4/stable --config roles=broker
 
-juju deploy kafka -n 3 --channel 4/edge --config roles=controller kraft
+juju deploy kafka -n 3 --channel 4/stable --config roles=controller kraft
 
 juju integrate kafka:peer-cluster-orchestrator kraft:peer-cluster
 
@@ -40,7 +40,7 @@ juju_wait --timeout 900
 
 juju deploy self-signed-certificates --config ca-common-name="Tutorial CA"
 
-juju_wait --timeout 600
+juju_wait --timeout 900
 
 # ── Stage 06: Kafka Connect ETL pipeline ─────────────────────────────────────
 
