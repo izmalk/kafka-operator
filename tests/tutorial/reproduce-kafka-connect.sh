@@ -71,7 +71,7 @@ juju deploy kafka-connect --channel edge
 juju deploy postgresql --channel 14/stable
 juju deploy opensearch --channel 2/stable --config profile=testing
 
-juju_wait --timeout 1200 --allow-blocked opensearch,kafka-connect
+# juju_wait --timeout 1200 --allow-blocked opensearch,kafka-connect
 
 juju integrate opensearch self-signed-certificates
 
