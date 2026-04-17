@@ -44,7 +44,7 @@ fi
 # ---------------------------------------------------------------------------
 echo "[2/4] Setting up Python venv and installing dependencies..."
 if [ ! -d ".venv" ]; then
-    python3 -m venv .venv
+    python3 -m virtualenv .venv
 fi
 source .venv/bin/activate
 
