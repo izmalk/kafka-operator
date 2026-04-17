@@ -1,0 +1,6 @@
+summary: "Self-contained reproducer for Kafka Connect ETL pipeline"
+
+kill-timeout: 90m
+
+execute: |
+  bash "$SPREAD_PATH/tests/tutorial/reproduce-kafka-connect.sh"

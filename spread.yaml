@@ -70,3 +70,10 @@ suites:
     prepare: |
       # Juju's strictly-confined snap requires ~/.local/share/juju to exist when run as root.
       mkdir -p /root/.local/share/juju
+
+  tests/tutorial/reproduce_kafka_connect/:
+    summary: Self-contained Kafka Connect reproducer
+    systems:
+      - ubuntu-24.04-64
+    prepare: |
+      mkdir -p /root/.local/share/juju
