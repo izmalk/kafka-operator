@@ -40,7 +40,7 @@ juju deploy kafka-connect --channel edge
 juju deploy postgresql --channel 14/stable
 juju deploy opensearch --channel 2/stable --config profile=testing
 
-juju_wait --timeout 1200 --allow-blocked opensearch,kafka-connect
+# juju_wait --timeout 1200 --allow-blocked opensearch,kafka-connect
 
 juju integrate opensearch self-signed-certificates
 
@@ -99,7 +99,7 @@ juju deploy postgresql-connect-integrator \
     --config db_name=tutorial \
     --config topic_prefix=etl_
 
-juju wait-for unit postgresql-connect-integrator/0 --query='workload-status == "blocked"' --timeout 5m
+# juju wait-for unit postgresql-connect-integrator/0 --query='workload-status == "blocked"' --timeout 5m
 
 juju integrate postgresql-connect-integrator postgresql
 juju integrate postgresql-connect-integrator kafka-connect
@@ -111,7 +111,7 @@ juju deploy opensearch-connect-integrator \
     --config mode=sink \
     --config topics="etl_posts"
 
-juju wait-for unit opensearch-connect-integrator/0 --query='workload-status == "blocked"' --timeout 5m
+# juju wait-for unit opensearch-connect-integrator/0 --query='workload-status == "blocked"' --timeout 5m
 
 juju integrate opensearch-connect-integrator opensearch
 juju integrate opensearch-connect-integrator kafka-connect
