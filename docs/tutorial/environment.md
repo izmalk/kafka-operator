@@ -49,6 +49,8 @@ You can list all LXD containers by entering the command `lxc list` into the comm
 +------+-------+------+------+------+-----------+
 ```
 
+<!-- test:wait --seconds 20 -->
+
 ## Install and prepare Juju
 
 [Juju](https://juju.is/) is an Operator Lifecycle Manager (OLM) for clouds, bare metal,
@@ -71,6 +73,8 @@ Install `jq`, a JSON processor used in later steps:
 sudo snap install jq
 ```
 
+<!-- test:wait --seconds 30 -->
+
 Juju already has built-in knowledge of LXD and how it works, so there is no additional setup
 or configuration needed. A Juju controller will be deployed, which will in turn
 manage the operations of Charmed Apache Kafka. All we need to do is run the following command
@@ -80,6 +84,8 @@ several minutes depending on the resources available on your machine:
 ```shell
 juju bootstrap localhost overlord
 ```
+
+<!-- test:wait --seconds 10 -->
 
 The Juju controller exists within an LXD container.
 To verify this, check the list of containers:
@@ -109,6 +115,8 @@ Set up a specific model for Charmed Apache Kafka named `tutorial`:
 ```shell
 juju add-model tutorial
 ```
+
+<!-- test:wait --seconds 10 -->
 
 Check the status of the model you created:
 

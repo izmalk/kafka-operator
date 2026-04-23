@@ -19,6 +19,12 @@ backends:
         set -e
         snap install lxd --channel=5.21/stable
         snap install juju --channel=3/stable
+        lxd waitready
+        lxd init --auto
+        lxc network set lxdbr0 ipv6.address none
+        # Pre-fetch the Ubuntu 24.04 image so Juju can bootstrap without
+        # waiting for a remote image download inside the tutorial steps.
+        lxc image copy ubuntu:24.04 local:
         echo root:${SPREAD_PASSWORD} | chpasswd
         printf 'PasswordAuthentication yes\nPermitRootLogin yes\n' \
           > /etc/ssh/sshd_config.d/10-spread.conf
