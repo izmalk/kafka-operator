@@ -11,63 +11,103 @@ This is an **IAAS/VM** charmed operator.
 To deploy on Kubernetes, see [Charmed Apache Kafka K8s operator](https://documentation.ubuntu.com/charmed-kafka-k8s/4/).
 ```
 
+(charmed-apache-kafka)=
 # Charmed Apache Kafka documentation
 
-Charmed Apache Kafka is an open-source software operator, packaged as a
-[Juju charm](https://documentation.ubuntu.com/juju/3.6/reference/charm/),
-that simplifies the deployment, scaling, and management of Apache Kafka clusters
-on physical hardware, Virtual Machines, as well as cloud and cloud-like environments
-including AWS, Azure, OpenStack, and VMware.
+**Charmed Apache Kafka is an open-source operator, packaged as a [Juju charm](https://documentation.ubuntu.com/juju/3.6/reference/charm/), that deploys and manages [Apache Kafka](https://kafka.apache.org) clusters on physical hardware, virtual machines, and cloud environments including AWS, Azure, and OpenStack.**
 
-[Apache Kafka](https://kafka.apache.org) is a free, open-source software project
-by the Apache Software Foundation.
+**The charm automates Apache Kafka operations from Day 0 to Day 2.** It handles cluster deployment and scaling, TLS encryption, password rotation, client credential management, monitoring integration, partition rebalancing with Cruise Control, and cross-cluster replication with MirrorMaker 2.
 
-The charm helps ops teams and administrators automate Apache Kafka operations from
-[Day 0 to Day 2](https://codilime.com/blog/day-0-day-1-day-2-the-software-lifecycle-in-the-cloud-age/)
-with additional capabilities, such as: replication, TLS encryption, password rotation,
-easy-to-use application integration, and monitoring.
+**This documentation covers setup, configuration, security, and maintenance of Charmed Apache Kafka clusters.** It includes a guided tutorial, task-oriented how-to guides for each supported platform, reference material for system internals, and explanations of architectural decisions.
+
+**The documentation is intended for ops teams and system administrators who manage Apache Kafka clusters using Juju.** It assumes familiarity with Linux system administration and the Juju deployment model.
 
 ## In this documentation
 
-|                    |                                                                     |
-|--------------------|---------------------------------------------------------------------|
-| **Tutorial** | [Introduction](tutorial-introduction) • [Step 1: Environment setup](tutorial-environment) |
-| **Deployment** | [Deploy](how-to-deploy-index) • [Juju CLI](how-to-deploy-anywhere) • [Terraform](how-to-deploy-terraform) • [AWS](how-to-deploy-on-aws) •  [Azure](how-to-deploy-on-azure) • [Juju Spaces](how-to-deploy-spaces) •  [Requirements](reference-requirements) |
-| **Operations** | [Connections management](how-to-client-connections) • [Unit management](how-to-manage-units) • [Monitoring](how-to-monitoring) • [Snap commands](reference-snap-commands) • [File system paths](reference-file-system-paths) • [Broker listeners](reference-broker-listeners) • [Status reference](reference-statuses) • [Performance overview](reference-performance-tuning) |
-| **Maintenance** | [Version upgrade](how-to-upgrade) • [Migration](how-to-cluster-migration) • [Replication](how-to-cluster-replication) • [MirrorMaker](explanation-mirrormaker2-0)  • [Backups](explanation-backups) |
-| **Security** | [Overview](explanation-security) • [Enable encryption](how-to-tls-encryption) • [mTLS](how-to-create-mtls-client-credentials) • [Cryptography](explanation-cryptography) |
-| **Extensions** | [Kafka Connect](how-to-use-kafka-connect-for-etl-workloads) • [Schema registry](how-to-schemas-serialisation) |
+The following sections organise pages by subject rather than by documentation type, so that all resources for a given topic appear together.
 
-## How the documentation is organised
+### Getting started
 
-[Tutorial](tutorial-introduction): For new users needing to learn how to use Charmed Apache Kafka <br>
-[How-to guides](how-to-index): For users needing step-by-step instructions to achieve a practical goal <br>
-[Reference](reference-index): For precise, theoretical, factual information to be used while working with the charm <br>
-[Explanation](explanation-index): For deeper understanding of key Charmed Apache Kafka concepts <br>
+The tutorial provides a guided path from first deployment through to advanced topics such as encryption and ETL.
+
+* **Tutorial**: {ref}`Introduction <tutorial-introduction>` • {ref}`Environment setup <tutorial-environment>` • {ref}`Deploy <tutorial-deploy>` • {ref}`Client integration <tutorial-integrate-with-client-applications>` • {ref}`Password management <tutorial-manage-passwords>` • {ref}`Encryption <tutorial-enable-encryption>` • {ref}`Kafka Connect ETL <tutorial-kafka-connect>` • {ref}`Partition rebalancing <tutorial-rebalance-partitions>` • {ref}`Cleanup <tutorial-cleanup>`
+
+### Deployment
+
+All deployment methods produce equivalent clusters; the choice depends on your target platform and infrastructure tooling.
+
+* **Juju CLI**: {ref}`Deploy with Juju <how-to-deploy-anywhere>`
+* **Terraform**: {ref}`Deploy via Terraform <how-to-deploy-terraform>` • {ref}`Terraform module reference <reference-terraform>`
+* **AWS**: {ref}`Deploy on AWS <how-to-deploy-on-aws>`
+* **Azure**: {ref}`Deploy on Azure <how-to-deploy-on-azure>`
+* **Network spaces**: {ref}`Deploy on Juju spaces <how-to-deploy-spaces>`
+* **Requirements**: {ref}`System requirements <reference-requirements>`
+* **Release notes**: {ref}`Releases <reference-release-notes-index>`
+
+### Security and encryption
+
+Internal communication between brokers and controllers is encrypted by default; client-facing encryption and authentication require additional configuration.
+
+* **TLS**: {ref}`Enable TLS encryption <how-to-tls-encryption>` • {ref}`Enable encryption (tutorial) <tutorial-enable-encryption>` • {ref}`Cryptography details <explanation-cryptography>`
+* **mTLS**: {ref}`Create mTLS client credentials <how-to-create-mtls-client-credentials>`
+* **OAuth**: {ref}`Enable OAuth <how-to-enable-oauth>`
+* **Security overview**: {ref}`Security <explanation-security>`
+
+### Client applications and data streaming
+
+Clients connect to Charmed Apache Kafka through the Data Integrator charm; Kafka Connect and Karapace extend the cluster for ETL and schema management.
+
+* **Client connections**: {ref}`Manage client connections <how-to-client-connections>` • {ref}`Client integration (tutorial) <tutorial-integrate-with-client-applications>`
+* **Kafka Connect**: {ref}`Use Kafka Connect for ETL <how-to-use-kafka-connect-for-etl-workloads>` • {ref}`Kafka Connect ETL (tutorial) <tutorial-kafka-connect>`
+* **Schemas**: {ref}`Schemas and serialisation <how-to-schemas-serialisation>`
+* **Kafka UI**: {ref}`Use Kafka UI <how-to-kafka-ui>`
+* **Listeners**: {ref}`Broker listeners <reference-broker-listeners>`
+
+### Operations and maintenance
+
+Cruise Control enables partition rebalancing when brokers are added or removed; the Canonical Observability Stack provides metrics, alerts, and dashboards.
+
+* **Unit management**: {ref}`Manage units <how-to-manage-units>` • {ref}`Partition rebalancing (tutorial) <tutorial-rebalance-partitions>`
+* **Monitoring**: {ref}`Set up monitoring <how-to-monitoring>`
+* **Upgrades**: {ref}`Upgrade between versions <how-to-upgrade>`
+* **Replication**: {ref}`Set up cluster replication <how-to-cluster-replication>` • {ref}`MirrorMaker 2.0 overview <explanation-mirrormaker2-0>`
+* **Migration**: {ref}`Migrate from non-charmed clusters <how-to-cluster-migration>`
+* **Backups**: {ref}`Backups <explanation-backups>`
+* **Performance**: {ref}`Performance tuning <reference-performance-tuning>`
+* **Passwords**: {ref}`Password management (tutorial) <tutorial-manage-passwords>`
+* **Internals**: {ref}`Snap commands <reference-snap-commands>` • {ref}`File system paths <reference-file-system-paths>` • {ref}`Charm statuses <reference-statuses>`
+
+## How this documentation is organised
+
+This documentation uses the [Diátaxis documentation structure](https://diataxis.fr/).
+
+* {ref}`Tutorials <tutorial-introduction>` take you from a fresh environment through deployment, client integration, encryption, ETL with Kafka Connect, and partition rebalancing.
+* {ref}`How-to guides <how-to-index>` cover deploying on AWS, Azure, and bare metal, configuring TLS and OAuth, managing client connections, scaling units, and setting up monitoring with the Canonical Observability Stack.
+* {ref}`Reference <reference-index>` lists system requirements, file system paths, snap commands, listener configuration, charm statuses, and Terraform module inputs.
+* {ref}`Explanation <explanation-index>` discusses the security model, cryptographic implementation, backup strategy, and MirrorMaker 2.0 architecture.
 
 ## Project and community
 
-Charmed Apache Kafka is part of the [Juju](https://juju.is/) ecosystem of open-source,
-self-driving deployment tools. It can be integrated with multiple other Juju charms,
-also available on [Charmhub](https://charmhub.io/).
+Charmed Apache Kafka is part of the [Juju](https://juju.is/) ecosystem and integrates with other charms in the [Canonical Data Platform](https://canonical.com/data).
 
-It’s an open-source project developed and supported by [Canonical](https://canonical.com/)
-that welcomes community contributions, suggestions, fixes and constructive feedback.
+### Get involved
 
-- [Read our Code of Conduct](https://ubuntu.com/community/code-of-conduct)
-- [Join the Discourse forum](https://discourse.charmhub.io/tag/kafka)
-- [Contribute](https://github.com/canonical/kafka-operator/blob/main/CONTRIBUTING.md) and report [issues](https://github.com/canonical/kafka-operator/issues/new)
-- Explore [Canonical Data Fabric solutions](https://canonical.com/data)
-- [Contact us](reference-contact) for all further questions
+Report bugs and request features through the project issue tracker on GitHub. Discuss the charm and share operational experience with other users and contributors.
 
-## License and trademarks
+* [Matrix channel](https://matrix.to/#/#charmhub-data-platform:ubuntu.com)
+* [Discourse forum](https://discourse.charmhub.io/tag/kafka)
+* [Issue tracker](https://github.com/canonical/kafka-operator/issues/new)
+* [Contribution guide](https://github.com/canonical/kafka-operator/blob/main/CONTRIBUTING.md)
+* {ref}`Contacts <reference-contact>`
 
-Apache®, Apache Kafka, Kafka®, and the Apache Kafka logo are either registered trademarks
-or trademarks of the Apache Software Foundation in the United States and/or other countries.
+### Governance and policies
 
-The Charmed Apache Kafka Operator is free software, distributed under the Apache Software License,
-version 2.0.
-See [LICENSE](https://github.com/canonical/kafka-operator/blob/main/LICENSE) for more information.
+* [Code of conduct](https://ubuntu.com/community/code-of-conduct)
+* {ref}`Trademarks <explanation-trademarks>`
+
+### Commercial support
+
+For enterprise deployment assistance and commercial support, explore [Canonical Data solutions](https://canonical.com/data).
 
 ```{toctree}
 :titlesonly:

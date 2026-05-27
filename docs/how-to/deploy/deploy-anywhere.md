@@ -4,12 +4,11 @@ myst:
     description: "Platform-independent guide to deploy Charmed Apache Kafka - set up Juju controller, model, and create admin users."
 ---
 
+(how-to-deploy-anywhere)=
 # How to deploy Charmed Apache Kafka
 
 This guide provides platform-independent deployment instructions using the Juju CLI.
 For specific platform guides, see: [AWS](how-to-deploy-on-aws) and [Azure](how-to-deploy-on-azure). Alternatively, you can [deploy via Terraform](how-to-deploy-terraform).
-
-(how-to-deploy-anywhere)=
 
 ```{caution}
 For K8s Charmed Apache Kafka, see the [Charmed Apache Kafka K8s documentation](https://charmhub.io/kafka-k8s) instead.
