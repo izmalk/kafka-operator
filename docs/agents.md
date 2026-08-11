@@ -9,6 +9,30 @@ make clean   # remove build artifacts and virtual environment
 make run     # install dependencies, build, and serve with live reload at http://127.0.0.1:8000
 ```
 
+## Auto-generated reference pages
+
+Three reference pages are generated at build time from charm source files,
+not hand-written:
+
+| Page | Source file | Generator |
+|------|-------------|-----------|
+| `reference/_generated/actions.md` | `machine/actions.yaml` | `docs/_dev/generate_charm_reference.py` |
+| `reference/_generated/configurations.md` | `machine/config.yaml` | `docs/_dev/generate_charm_reference.py` |
+| `reference/_generated/statuses.md` | `common/single_kernel_kafka/core/literals.py` | `docs/_dev/generate_statuses.py` |
+
+The `Status` enum in `literals.py` carries documentation prose
+(`expectations`, `actions`, `hidden`) as keyword arguments on each
+`StatusLevel(...)` call. These fields are not used at runtime — they
+exist solely to feed the statuses reference page generator.
+
+Generated output lives in `docs/reference/_generated/` (gitignored).
+The `make generate` target (also run automatically by `make html`,
+`make run`, and `make pdf`) regenerates all pages.
+
+On Read the Docs, the `pre_build` job in `.readthedocs.yaml` runs the
+generators before Sphinx. PR builds are only cancelled when no changes
+affect `docs/`, `.readthedocs.yaml`, or the source files listed above.
+
 ## Stack
 
 - **Sphinx** built and hosted on **Read the Docs**

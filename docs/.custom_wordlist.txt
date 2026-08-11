@@ -188,6 +188,8 @@ tf
 codec
 codecs
 cpu
+enum
+gitignored
 gzip
 sysconfigs
 uncompacted
