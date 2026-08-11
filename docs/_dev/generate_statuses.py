@@ -14,15 +14,8 @@ For each enum member it extracts:
 * the status message text (resolving f-string interpolations such as
   ``{SNAP_NAME}`` and ``{MIN_REPLICAS}`` by reading those module-level
   constants from the same AST)
-* the documentation prose (``expectations`` and ``actions``) from
-  ``# docs:`` comments placed immediately after each enum member
-
-The ``# docs:`` comments are NOT runtime data — they are documentation
-prose consumed only by this script.  Recognised prefixes:
-
-* ``# docs:expectations:`` — what this status means to the operator
-* ``# docs:actions:``      — what the operator should do about it
-* ``# docs:hidden``        — suppress this status from the docs table
+* the documentation prose (``expectations``, ``actions``, ``hidden``)
+  from the keyword arguments passed to each ``StatusLevel(...)`` call
 
 Framework-level statuses (Maintenance/Error/Terminated/Unknown) are set
 by Juju itself, not by charm code, so they are not in the enum.  They
@@ -44,13 +37,14 @@ Outputs::
 from __future__ import annotations
 
 import ast
-import io
 import sys
-import tokenize
 from pathlib import Path
 from typing import Any
 
-# Expected script path:  docs/_dev/generate_statuses.py
+# Resolve paths relative to this script so it works regardless of CWD.
+# Script:  docs/_dev/generate_statuses.py
+# Docs:    docs/
+# Repo:    (root)
 _SCRIPT_PATH = Path(__file__).resolve()
 _DEV_DIR = _SCRIPT_PATH.parent
 _DOCS_DIR = _DEV_DIR.parent
@@ -75,6 +69,8 @@ _STATUS_LABEL: dict[str, str] = {
 }
 
 # Framework-level statuses set by Juju itself, not by charm code.
+# These are not in the Status enum; they are appended after the
+# enum-derived rows.  Edit this list to add or modify framework statuses.
 _FRAMEWORK_STATUSES: list[dict[str, str]] = [
     {
         "status": "Maintenance",
@@ -110,88 +106,6 @@ _FRAMEWORK_STATUSES: list[dict[str, str]] = [
         "actions": "Manual investigation required if status is permanent",
     },
 ]
-
-
-# ---------------------------------------------------------------------------
-# Comment parsing
-# ---------------------------------------------------------------------------
-
-# Prefixes used in literals.py to mark documentation prose.
-_DOCS_EXPECTATIONS = "# docs:expectations:"
-_DOCS_ACTIONS = "# docs:actions:"
-_DOCS_HIDDEN = "# docs:hidden"
-
-
-def parse_docs_comments(source: str) -> dict[int, dict[str, Any]]:
-    """Parse ``# docs:`` comments from source via ``tokenize``.
-
-    Returns a dict mapping the **line number of the enum member
-    assignment** (the line *before* the first comment) to a dict with
-    keys ``expectations``, ``actions``, and ``hidden``.
-
-    Comments are grouped by proximity: consecutive comment lines
-    immediately following an enum member are attached to that member.
-    The key is the line number of the last non-comment, non-blank line
-    before the comment block starts.
-    """
-    tokens = tokenize.generate_tokens(io.StringIO(source).readline)
-    comments: list[tuple[int, str]] = []  # (line_no, comment_text)
-    for tok in tokens:
-        if tok.type == tokenize.COMMENT:
-            text = tok.string
-            if text.startswith(_DOCS_EXPECTATIONS) or text.startswith(
-                _DOCS_ACTIONS
-            ) or text.startswith(_DOCS_HIDDEN):
-                comments.append((tok.start[0], text))
-
-    if not comments:
-        return {}
-
-    # Read all lines so we can find the preceding non-comment line.
-    lines = source.splitlines()
-
-    result: dict[int, dict[str, Any]] = {}
-    current_group: list[tuple[int, str]] = []
-    prev_anchor_line = 0
-
-    def _flush_group(group: list[tuple[int, str]], anchor: int) -> None:
-        if not group or not anchor:
-            return
-        entry: dict[str, Any] = {
-            "expectations": "",
-            "actions": "",
-            "hidden": False,
-        }
-        for _line, text in group:
-            if text.startswith(_DOCS_EXPECTATIONS):
-                entry["expectations"] += text[len(_DOCS_EXPECTATIONS) :].strip() + " "
-            elif text.startswith(_DOCS_ACTIONS):
-                entry["actions"] += text[len(_DOCS_ACTIONS) :].strip() + " "
-            elif text.startswith(_DOCS_HIDDEN):
-                entry["hidden"] = True
-        entry["expectations"] = entry["expectations"].strip()
-        entry["actions"] = entry["actions"].strip()
-        result[anchor] = entry
-
-    for line_no, text in comments:
-        # If there's a gap (blank or non-comment line) since the last
-        # comment, flush the current group and find a new anchor.
-        if current_group and line_no != current_group[-1][0] + 1:
-            _flush_group(current_group, prev_anchor_line)
-            current_group = []
-
-        if not current_group:
-            # Find the preceding non-comment, non-blank line as anchor.
-            for ln in range(line_no - 1, 0, -1):
-                line = lines[ln - 1].strip() if ln - 1 < len(lines) else ""
-                if line and not line.startswith("#"):
-                    prev_anchor_line = ln
-                    break
-
-        current_group.append((line_no, text))
-
-    _flush_group(current_group, prev_anchor_line)
-    return result
 
 
 # ---------------------------------------------------------------------------
@@ -237,12 +151,28 @@ def _eval_joinedstr(node: ast.JoinedStr, constants: dict[str, Any]) -> str:
     return "".join(parts)
 
 
+def _eval_str_expr(node: ast.expr, constants: dict[str, Any]) -> str:
+    """Evaluate a string-valued expression used as a keyword value.
+
+    Handles plain string constants and f-strings.  Python concatenates
+    adjacent string literals like ``("a " "b")`` into a single
+    ``ast.Constant`` at parse time, so no special handling is needed
+    for that case.
+    """
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.JoinedStr):
+        return _eval_joinedstr(node, constants)
+    return ""
+
+
 def parse_status_enum(path: Path) -> list[dict[str, Any]]:
     """Parse the ``Status`` enum from ``literals.py`` via AST.
 
     Returns a list of dicts in declaration order, each with keys:
     ``name``, ``status_class``, ``message``, ``expectations``,
-    ``actions``, ``hidden``.
+    ``actions``, ``hidden`` — read from the keyword arguments passed to
+    each ``StatusLevel(...)`` call.
 
     ``status_class`` is the raw ops class name (e.g.
     ``"BlockedStatus"``); the caller maps it to a label.
@@ -258,10 +188,6 @@ def parse_status_enum(path: Path) -> list[dict[str, Any]]:
         "MIN_REPLICAS": min_replicas,
     }
 
-    # Parse # docs: comments, keyed by the line number of the enum
-    # member assignment.
-    docs_by_line = parse_docs_comments(source)
-
     statuses: list[dict[str, Any]] = []
 
     for node in ast.walk(tree):
@@ -275,7 +201,7 @@ def parse_status_enum(path: Path) -> list[dict[str, Any]]:
                 continue
             member_name = target.id
 
-            # item.value is a Call to StatusLevel(<status_obj>, "LEVEL")
+            # item.value is a Call to StatusLevel(<status_obj>, "LEVEL", **kwargs)
             call = item.value
             if not isinstance(call, ast.Call):
                 continue
@@ -302,21 +228,28 @@ def parse_status_enum(path: Path) -> list[dict[str, Any]]:
                 elif isinstance(msg_node, ast.JoinedStr):
                     message = _eval_joinedstr(msg_node, constants)
 
-            # Look up docs by the line number of the last line of the
-            # assignment (end_lineno), because # docs: comments come
-            # immediately after the assignment — which may span multiple
-            # lines.
-            end_line = getattr(item, "end_lineno", item.lineno)
-            docs = docs_by_line.get(end_line, {})
+            # Extract expectations/actions/hidden from StatusLevel(...) kwargs.
+            expectations = ""
+            actions = ""
+            hidden = False
+            for kw in call.keywords:
+                if kw.arg == "expectations":
+                    expectations = _eval_str_expr(kw.value, constants)
+                elif kw.arg == "actions":
+                    actions = _eval_str_expr(kw.value, constants)
+                elif kw.arg == "hidden":
+                    hidden = bool(
+                        isinstance(kw.value, ast.Constant) and kw.value.value
+                    )
 
             statuses.append(
                 {
                     "name": member_name,
                     "status_class": status_class,
                     "message": message,
-                    "expectations": docs.get("expectations", ""),
-                    "actions": docs.get("actions", ""),
-                    "hidden": docs.get("hidden", False),
+                    "expectations": expectations,
+                    "actions": actions,
+                    "hidden": hidden,
                 }
             )
         break  # only the Status enum
@@ -422,14 +355,14 @@ def generate_statuses_page(
 
 
 def _warn_undocumented(enum_statuses: list[dict[str, Any]]) -> int:
-    """Warn about enum members with no docs comments (not even hidden)."""
+    """Warn about enum members with no docs fields (not even hidden)."""
     n = 0
     for s in enum_statuses:
         if not s.get("hidden") and not s.get("expectations") and not s.get("actions"):
             print(
                 f"WARNING: Status enum member '{s['name']}' has no "
-                f"# docs: comments — will appear with empty "
-                f"Expectations/Actions.",
+                f"expectations/actions/hidden fields — will appear with "
+                f"empty Expectations/Actions.",
                 file=sys.stderr,
             )
             n += 1
