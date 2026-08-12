@@ -355,14 +355,14 @@ def generate_statuses_page(
 
 
 def _warn_undocumented(enum_statuses: list[dict[str, Any]]) -> int:
-    """Warn about enum members with no docs fields (not even hidden)."""
+    """Warn about enum members with empty docs fields and not hidden."""
     n = 0
     for s in enum_statuses:
         if not s.get("hidden") and not s.get("expectations") and not s.get("actions"):
             print(
-                f"WARNING: Status enum member '{s['name']}' has no "
-                f"expectations/actions/hidden fields — will appear with "
-                f"empty Expectations/Actions.",
+                f"WARNING: Status enum member '{s['name']}' has empty "
+                f"expectations/actions and is not hidden — will appear "
+                f"with empty Expectations/Actions in the docs table.",
                 file=sys.stderr,
             )
             n += 1
