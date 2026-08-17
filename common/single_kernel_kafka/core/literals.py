@@ -288,9 +288,12 @@ class StatusLevel:
     documentation prose for auto-generated pages. They are
     NOT used by the charm at runtime.
 
-    * ``expectations`` — what this status should mean to the operator
-    * ``actions``      — what the operator should do about it
-    * ``hidden``       — suppress this status from the docs table
+    Attributes:
+        status: The ops status object (Active/Blocked/Waiting/Maintenance).
+        log_level: The log level at which the status message is emitted.
+        expectations: What this status means to the operator (docs only).
+        actions: What the operator should do about it (docs only).
+        hidden: Suppress this status from the docs table (docs only).
     """
 
     status: StatusBase
