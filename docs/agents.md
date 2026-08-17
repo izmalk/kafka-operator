@@ -21,9 +21,11 @@ not hand-written:
 | `reference/_generated/statuses.md` | `common/single_kernel_kafka/core/literals.py` | `docs/_dev/generate_statuses.py` |
 
 The `Status` enum in `literals.py` carries documentation prose
-(`expectations`, `actions`, `hidden`) as fields on each `StatusLevel`.
-These fields are not used at runtime — they exist solely to feed the
-statuses reference page generator, which imports the enum directly.
+(`expectations`, `actions`) as fields on each `StatusLevel`. These
+fields are not used at runtime — they exist solely to feed the statuses
+reference page generator, which imports the enum directly. Members
+with no `expectations` and no `actions` are automatically excluded from
+the generated table.
 
 Generated output lives in `docs/reference/_generated/` (gitignored).
 The `make generate` target (also run automatically by `make html`,

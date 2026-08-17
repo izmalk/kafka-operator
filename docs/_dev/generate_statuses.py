@@ -5,8 +5,9 @@
 
 Imports the ``Status`` enum from
 ``common/single_kernel_kafka/core/literals.py`` and reads the
-documentation prose (``expectations``, ``actions``, ``hidden``) carried
-on each ``StatusLevel``.
+documentation prose (``expectations``, ``actions``) carried on each
+``StatusLevel``.  Members with no ``expectations`` and no ``actions``
+are automatically excluded from the generated table.
 
 Framework-level statuses (Maintenance/Error/Terminated/Unknown) are set
 by Juju itself and are defined in ``_FRAMEWORK_STATUSES`` below.
@@ -180,7 +181,7 @@ def main() -> int:
 
     n_total = len(list(Status))
     status_rows = _prepare_statuses()
-    n_hidden = n_total - len(status_rows)
+    n_excluded = n_total - len(status_rows)
     framework_rows = _prepare_framework_statuses()
 
     _OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -200,7 +201,7 @@ def main() -> int:
 
     print(
         f"Generated {out.relative_to(_REPO_ROOT)} "
-        f"({len(status_rows)} shown, {n_hidden} hidden, "
+        f"({len(status_rows)} shown, {n_excluded} excluded, "
         f"{len(framework_rows)} framework)"
     )
     return 0
