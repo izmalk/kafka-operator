@@ -284,23 +284,22 @@ class KRaftQuorumInfo:
 class StatusLevel:
     """Status object helper.
 
-    The ``expectations``, ``actions``, and ``hidden`` fields hold
-    documentation prose for auto-generated pages. They are
-    NOT used by the charm at runtime.
+    The ``expectations`` and ``actions`` fields hold documentation prose
+    for auto-generated pages. They are NOT used by the charm at runtime.
+    A status with empty ``expectations`` and ``actions`` is
+    automatically excluded from the docs table.
 
     Attributes:
         status: The ops status object (Active/Blocked/Waiting/Maintenance).
         log_level: The log level at which the status message is emitted.
         expectations: What this status means to the operator (docs only).
         actions: What the operator should do about it (docs only).
-        hidden: Suppress this status from the docs table (docs only).
     """
 
     status: StatusBase
     log_level: DebugLevel
     expectations: str = ""
     actions: str = ""
-    hidden: bool = False
 
 
 class Status(Enum):
@@ -311,10 +310,10 @@ class Status(Enum):
         "DEBUG"
     )
     NO_PEER_RELATION = StatusLevel(
-        MaintenanceStatus("no peer relation yet"), "DEBUG", hidden=True
+        MaintenanceStatus("no peer relation yet"), "DEBUG"
     )
     NO_PEER_CLUSTER_RELATION = StatusLevel(
-        BlockedStatus("missing required peer-cluster relation"), "DEBUG", hidden=True
+        BlockedStatus("missing required peer-cluster relation"), "DEBUG"
     )
     SNAP_NOT_INSTALLED = StatusLevel(
         BlockedStatus(f"unable to install {SNAP_NAME} snap"),
@@ -334,7 +333,7 @@ class Status(Enum):
         actions="Check the Apache Kafka logs for insights on the issue",
     )
     NOT_ALL_RELATED = StatusLevel(
-        MaintenanceStatus("not all units related"), "DEBUG", hidden=True
+        MaintenanceStatus("not all units related"), "DEBUG"
     )
     CC_NOT_RUNNING = StatusLevel(
         BlockedStatus("Cruise Control not running"),
@@ -356,13 +355,13 @@ class Status(Enum):
         ),
     )
     NO_CLUSTER_UUID = StatusLevel(
-        WaitingStatus("waiting for cluster uuid"), "DEBUG", hidden=True
+        WaitingStatus("waiting for cluster uuid"), "DEBUG"
     )
     NO_BOOTSTRAP_CONTROLLER = StatusLevel(
-        WaitingStatus("waiting for bootstrap controller"), "DEBUG", hidden=True
+        WaitingStatus("waiting for bootstrap controller"), "DEBUG"
     )
     MISSING_CONTROLLER_PASSWORD = StatusLevel(
-        WaitingStatus("waiting for controller user credentials"), "DEBUG", hidden=True
+        WaitingStatus("waiting for controller user credentials"), "DEBUG"
     )
     BROKER_NOT_CONNECTED = StatusLevel(
         BlockedStatus("unit not connected to the controller"),
@@ -433,10 +432,10 @@ class Status(Enum):
         ),
     )
     NO_INTERNAL_TLS = StatusLevel(
-        WaitingStatus("waiting for internal TLS setup"), "INFO", hidden=True
+        WaitingStatus("waiting for internal TLS setup"), "INFO"
     )
     NO_PEER_CLUSTER_CA = StatusLevel(
-        WaitingStatus("waiting for peer-cluster TLS setup"), "INFO", hidden=True
+        WaitingStatus("waiting for peer-cluster TLS setup"), "INFO"
     )
     MTLS_REQUIRES_TLS = StatusLevel(
         BlockedStatus("can't setup mTLS client without a TLS relation first."),
@@ -490,10 +489,10 @@ class Status(Enum):
         ),
     )
     NOT_IMPLEMENTED = StatusLevel(
-        BlockedStatus("feature not yet implemented"), "WARNING", hidden=True
+        BlockedStatus("feature not yet implemented"), "WARNING"
     )
     NO_BALANCER_RELATION = StatusLevel(
-        MaintenanceStatus("no balancer relation yet"), "DEBUG", hidden=True
+        MaintenanceStatus("no balancer relation yet"), "DEBUG"
     )
     NO_BROKER_DATA = StatusLevel(
         MaintenanceStatus("missing broker data"),

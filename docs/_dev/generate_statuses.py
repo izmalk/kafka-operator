@@ -118,11 +118,15 @@ def _status_label(level: StatusLevel) -> str:
 
 
 def _prepare_statuses() -> list[dict[str, str]]:
-    """Transform non-hidden ``Status`` members into template-ready rows."""
+    """Transform documented ``Status`` members into template-ready rows.
+
+    Members with no ``expectations`` and no ``actions`` are excluded
+    from the docs table automatically.
+    """
     rows = []
     for member in Status:
         level = member.value
-        if level.hidden:
+        if not level.expectations and not level.actions:
             continue
         rows.append(
             {
@@ -149,15 +153,18 @@ def _prepare_framework_statuses() -> list[dict[str, str]]:
 
 
 def _warn_undocumented() -> int:
-    """Warn about visible members with no documentation prose."""
+    """Warn about members with no documentation prose.
+
+    These are excluded from the docs table. The warning is informational
+    only and does not break the build.
+    """
     n = 0
     for member in Status:
         level = member.value
-        if not level.hidden and not level.expectations and not level.actions:
+        if not level.expectations and not level.actions:
             print(
-                f"WARNING: Status enum member '{member.name}' has empty "
-                f"expectations/actions and is not hidden — will appear "
-                f"with empty Expectations/Actions in the docs table.",
+                f"WARNING: Status enum member '{member.name}' has no "
+                f"expectations/actions — excluded from the docs table.",
                 file=sys.stderr,
             )
             n += 1
@@ -171,8 +178,9 @@ def main() -> int:
     """
     _warn_undocumented()
 
-    n_hidden = sum(1 for member in Status if member.value.hidden)
+    n_total = len(list(Status))
     status_rows = _prepare_statuses()
+    n_hidden = n_total - len(status_rows)
     framework_rows = _prepare_framework_statuses()
 
     _OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
