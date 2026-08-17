@@ -308,9 +308,7 @@ class Status(Enum):
 
     ACTIVE = StatusLevel(
         ActiveStatus(),
-        "DEBUG",
-        expectations="Normal charm operations",
-        actions="No actions required",
+        "DEBUG"
     )
     NO_PEER_RELATION = StatusLevel(
         MaintenanceStatus("no peer relation yet"), "DEBUG", hidden=True
