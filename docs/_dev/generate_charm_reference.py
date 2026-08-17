@@ -3,21 +3,9 @@
 # See LICENSE file for licensing details.
 """Generate reference Markdown pages from charm source files.
 
-This script parses ``actions.yaml`` and ``config.yaml`` from the machine charm
-and emits MyST Markdown into ``docs/reference/_generated/`` (which is
-gitignored). It runs as a pre-build step before Sphinx reads any Markdown
-files, so the published docs always reflect the current state of the charm
-metadata.
-
-The output mirrors the content Charmhub auto-generates for the
-``/kafka/actions`` and ``/kafka/configure`` pages, but is produced locally
-from the same source files Charmhub itself uses (``actions.yaml`` and
-``config.yaml`` bundled into the ``.charm`` artifact at pack time).
-
-Paths are resolved relative to this script so it works regardless of CWD.
-This is required because it is invoked both from ``docs/Makefile`` (with
-CWD ``docs/``) and from the Read the Docs ``pre_build`` job (with CWD at
-the repository root).
+Parses ``machine/actions.yaml`` and ``machine/config.yaml`` and renders
+them through Jinja2 templates into ``docs/reference/_generated/``
+(gitignored).  Runs as a pre-build step before Sphinx.
 
 Usage::
 
@@ -36,25 +24,25 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from jinja2 import Environment, FileSystemLoader
 
-# Resolve paths relative to this script so it works regardless of CWD.
-# Script:  docs/_dev/generate_charm_reference.py
-# Docs:    docs/
-# Machine: machine/
 _SCRIPT_PATH = Path(__file__).resolve()
 _DEV_DIR = _SCRIPT_PATH.parent
 _DOCS_DIR = _DEV_DIR.parent
 _REPO_ROOT = _DOCS_DIR.parent
 _MACHINE_DIR = _REPO_ROOT / "machine"
 _OUTPUT_DIR = _DOCS_DIR / "reference" / "_generated"
+_TEMPLATES_DIR = _DEV_DIR / "templates"
 
 _ACTIONS_FILE = _MACHINE_DIR / "actions.yaml"
 _CONFIG_FILE = _MACHINE_DIR / "config.yaml"
 
-# HTML comment inserted at the top of each generated page. Invisible in
-# rendered output, but visible in the Markdown source for anyone editing the
-# file directly.  Per-page notices are constructed in main() so each page
-# names the exact source file it was generated from.
+_env = Environment(
+    loader=FileSystemLoader(_TEMPLATES_DIR),
+    keep_trailing_newline=True,
+    trim_blocks=True,
+    lstrip_blocks=True,
+)
 
 
 def _autogen_notice(source_file: str) -> str:
@@ -71,14 +59,8 @@ def load_yaml(path: Path) -> Any:
         return yaml.safe_load(fh)
 
 
-def format_default(value: Any) -> str:
-    """Format a default value for display in a Markdown table cell.
-
-    Booleans render as ``true``/``false`` (lowercase, matching YAML/Juju
-    convention). Strings are wrapped in backticks; empty strings are shown
-    as ``""`` so the table cell is visible. Other types (int, float) are
-    rendered as-is inside backticks.
-    """
+def _format_default(value: Any) -> str:
+    """Format a default value for a Markdown table cell."""
     if value is None:
         return ""
     if isinstance(value, bool):
@@ -88,182 +70,67 @@ def format_default(value: Any) -> str:
     return f"`{value}`"
 
 
-def format_description(desc: Any) -> str:
-    """Normalise a description field into a single-line Markdown string.
-
-    YAML block scalars and multi-line plain scalars arrive with embedded
-    newlines and extra indentation. Collapse whitespace so the table cell
-    renders cleanly.
-    """
-    if desc is None:
+def _format_text(value: Any) -> str:
+    """Collapse whitespace in a description field for a table cell."""
+    if value is None:
         return ""
-    return " ".join(str(desc).strip().split())
+    return " ".join(str(value).strip().split())
 
 
-def _render_front_matter(description: str) -> list[str]:
-    """Return the YAML front matter lines for a generated page."""
-    return [
-        "---",
-        "myst:",
-        "  html_meta:",
-        f'    description: "{description}"',
-        "---",
-        "",
-    ]
-
-
-def generate_actions_page(actions_data: dict[str, Any]) -> str:
-    """Render the Actions reference page as MyST Markdown.
-
-    Mirrors the layout of https://charmhub.io/kafka/actions: one section per
-    action, with the description followed by a parameters table.
-    """
-    lines: list[str] = []
-    lines.extend(
-        _render_front_matter(
-            "Charmed Apache Kafka actions reference - complete list of juju "
-            "actions with parameters, types, and defaults."
-        )
-    )
-    # HTML comment after front matter (front matter must be first in MyST).
-    # Invisible in rendered output, visible in the Markdown source.
-    lines.append(_autogen_notice("machine/actions.yaml"))
-    lines.append("")
-    lines.append("(reference-actions)=")
-    lines.append("# Actions")
-    lines.append("")
-    lines.append(
-        "The following actions can be run on the Charmed Apache Kafka charm "
-        "using `juju run`."
-    )
-    lines.append("")
-
-    for action_name, spec in actions_data.items():
+def _prepare_actions(data: dict[str, Any]) -> dict[str, Any]:
+    """Transform raw YAML into template-ready data."""
+    actions = {}
+    for name, spec in data.items():
         if not isinstance(spec, dict):
             continue
-        lines.append(f"## `{action_name}`")
-        lines.append("")
-        description = spec.get("description")
-        if description:
-            # Render the description as plain paragraphs (matching Charmhub).
-            for paragraph in str(description).strip().split("\n\n"):
-                paragraph = " ".join(paragraph.split())
-                if paragraph:
-                    lines.append(paragraph)
-                    lines.append("")
-
-        params = spec.get("params") or {}
-        required = spec.get("required") or []
-        additional_properties = spec.get("additionalProperties")
-
-        if params:
-            lines.append("### Parameters")
-            lines.append("")
-            lines.append("| Name | Type | Default | Required | Description |")
-            lines.append("|---|---|---|---|---|")
-            for param_name, param_spec in params.items():
-                if not isinstance(param_spec, dict):
-                    continue
-                p_type = param_spec.get("type", "")
-                p_default = param_spec.get("default")
-                p_desc = param_spec.get("description", "")
-                is_required = "yes" if param_name in required else ""
-                lines.append(
-                    f"| `{param_name}` | `{p_type}` | "
-                    f"{format_default(p_default)} | {is_required} | "
-                    f"{format_description(p_desc)} |"
+        params = {}
+        constraints = []
+        for pname, pspec in (spec.get("params") or {}).items():
+            if not isinstance(pspec, dict):
+                continue
+            enum = pspec.get("enum")
+            minimum = pspec.get("minimum")
+            params[pname] = {
+                "type": pspec.get("type", ""),
+                "default": _format_default(pspec.get("default")),
+                "description": _format_text(pspec.get("description", "")),
+                "enum": enum,
+                "minimum": minimum,
+            }
+            if enum or minimum is not None:
+                constraints.append(
+                    {
+                        "name": pname,
+                        "enum": enum,
+                        "minimum": minimum,
+                    }
                 )
-            lines.append("")
-
-            # Emit constraints (enum / minimum) that don't fit the table.
-            constraint_lines: list[str] = []
-            for param_name, param_spec in params.items():
-                if not isinstance(param_spec, dict):
-                    continue
-                enum = param_spec.get("enum")
-                minimum = param_spec.get("minimum")
-                if enum or minimum is not None:
-                    constraint_lines.append(f"- `{param_name}` constraints:")
-                    if enum:
-                        allowed = ", ".join(f"`{v}`" for v in enum)
-                        constraint_lines.append(f"  - Allowed values: {allowed}")
-                    if minimum is not None:
-                        constraint_lines.append(f"  - Minimum: `{minimum}`")
-            if constraint_lines:
-                lines.extend(constraint_lines)
-                lines.append("")
-
-        if additional_properties is False:
-            lines.append("No additional parameters are accepted.")
-            lines.append("")
-
-    lines.append(
-        "This page is generated at build time from "
-        "[`machine/actions.yaml`]"
-        "(https://github.com/canonical/kafka-operator/blob/main/machine/actions.yaml)."
-    )
-    lines.append("")
-
-    return "\n".join(lines) + "\n"
+        actions[name] = {
+            "description": spec.get("description"),
+            "params": params,
+            "required": spec.get("required") or [],
+            "additional_properties": spec.get("additionalProperties"),
+            "constraints": constraints,
+        }
+    return {"actions": actions}
 
 
-def generate_configurations_page(config_data: dict[str, Any]) -> str:
-    """Render the Configurations reference page as MyST Markdown.
-
-    Mirrors the layout of https://charmhub.io/kafka/configure: a single table
-    listing every configuration option with its type, default, and
-    description.
-    """
-    lines: list[str] = []
-    lines.extend(
-        _render_front_matter(
-            "Charmed Apache Kafka configuration options reference - types, "
-            "defaults, and descriptions for all config options."
-        )
-    )
-    # HTML comment after front matter (front matter must be first in MyST).
-    # Invisible in rendered output, visible in the Markdown source.
-    lines.append(_autogen_notice("machine/config.yaml"))
-    lines.append("")
-    lines.append("(reference-configurations)=")
-    lines.append("# Configurations")
-    lines.append("")
-    lines.append(
-        "The following configuration options can be set on the Charmed Apache "
-        "Kafka charm using `juju config`."
-    )
-    lines.append("")
-
-    options = config_data.get("options") or {}
-    if not options:
-        lines.append("No configuration options defined.")
-        return "\n".join(lines) + "\n"
-
-    lines.append("| Name | Type | Default | Description |")
-    lines.append("|---|---|---|---|")
-    for opt_name, opt_spec in options.items():
-        if not isinstance(opt_spec, dict):
+def _prepare_configurations(data: dict[str, Any]) -> dict[str, Any]:
+    """Transform raw YAML into template-ready data."""
+    options = {}
+    for name, spec in (data.get("options") or {}).items():
+        if not isinstance(spec, dict):
             continue
-        o_type = opt_spec.get("type", "")
-        o_default = opt_spec.get("default")
-        o_desc = opt_spec.get("description", "")
-        lines.append(
-            f"| `{opt_name}` | `{o_type}` | {format_default(o_default)} | "
-            f"{format_description(o_desc)} |"
-        )
-    lines.append("")
-    lines.append(
-        "This page is generated at build time from "
-        "[`machine/config.yaml`]"
-        "(https://github.com/canonical/kafka-operator/blob/main/machine/config.yaml)."
-    )
-    lines.append("")
-
-    return "\n".join(lines) + "\n"
+        options[name] = {
+            "type": spec.get("type", ""),
+            "default": _format_default(spec.get("default")),
+            "description": _format_text(spec.get("description", "")),
+        }
+    return {"options": options}
 
 
 def main() -> int:
-    """Generate the reference pages and write them to the output directory.
+    """Generate the reference pages.
 
     Returns 0 on success, 1 if a source file is missing.
     """
@@ -279,19 +146,32 @@ def main() -> int:
 
     _OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    actions_md = generate_actions_page(actions_data)
-    config_md = generate_configurations_page(config_data)
+    actions_ctx = _prepare_actions(actions_data)
+    actions_ctx["description"] = (
+        "Charmed Apache Kafka actions reference - complete list of juju "
+        "actions with parameters, types, and defaults."
+    )
+    actions_ctx["autogen_notice"] = _autogen_notice("machine/actions.yaml")
+    actions_md = _env.get_template("actions.md.j2").render(**actions_ctx)
+    (_OUTPUT_DIR / "actions.md").write_text(actions_md, encoding="utf-8")
 
-    actions_out = _OUTPUT_DIR / "actions.md"
-    config_out = _OUTPUT_DIR / "configurations.md"
+    config_ctx = _prepare_configurations(config_data)
+    config_ctx["description"] = (
+        "Charmed Apache Kafka configuration options reference - types, "
+        "defaults, and descriptions for all config options."
+    )
+    config_ctx["autogen_notice"] = _autogen_notice("machine/config.yaml")
+    config_md = _env.get_template("configurations.md.j2").render(**config_ctx)
+    (_OUTPUT_DIR / "configurations.md").write_text(config_md, encoding="utf-8")
 
-    actions_out.write_text(actions_md, encoding="utf-8")
-    config_out.write_text(config_md, encoding="utf-8")
-
-    n_actions = len(actions_data)
-    n_options = len(config_data.get("options") or {})
-    print(f"Generated {actions_out.relative_to(_REPO_ROOT)} ({n_actions} actions)")
-    print(f"Generated {config_out.relative_to(_REPO_ROOT)} ({n_options} config options)")
+    print(
+        f"Generated {(_OUTPUT_DIR / 'actions.md').relative_to(_REPO_ROOT)} "
+        f"({len(actions_ctx['actions'])} actions)"
+    )
+    print(
+        f"Generated {(_OUTPUT_DIR / 'configurations.md').relative_to(_REPO_ROOT)} "
+        f"({len(config_ctx['options'])} config options)"
+    )
     return 0
 
 

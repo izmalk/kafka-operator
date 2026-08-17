@@ -29,6 +29,11 @@ Generated output lives in `docs/reference/_generated/` (gitignored).
 The `make generate` target (also run automatically by `make html`,
 `make run`, and `make pdf`) regenerates all pages.
 
+Both generators use Jinja2 templates from `docs/_dev/templates/`
+(`actions.md.j2`, `configurations.md.j2`, `statuses.md.j2`) to render
+the Markdown output.  Edit the templates to change page layout; edit
+the source files (or `StatusLevel` fields) to change content.
+
 On Read the Docs, the `pre_build` job in `.readthedocs.yaml` runs the
 generators before Sphinx. PR builds are only cancelled when no changes
 affect `docs/`, `.readthedocs.yaml`, or the source files listed above.

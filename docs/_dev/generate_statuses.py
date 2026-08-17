@@ -3,27 +3,18 @@
 # See LICENSE file for licensing details.
 """Generate the statuses reference page from the charm ``Status`` enum.
 
-This script parses the ``Status`` enum in
-``common/single_kernel_kafka/core/literals.py`` using the ``ast`` module
-(not import — importing would trigger ``SUBSTRATE`` env-var logic, ``ops``
-dependency, and ``refresh_versions.toml`` file reads).
+Parses the ``Status`` enum in
+``common/single_kernel_kafka/core/literals.py`` via ``ast`` (not import —
+importing would trigger ``SUBSTRATE`` env-var logic, ``ops`` dependency,
+and ``refresh_versions.toml`` file reads).
 
-For each enum member it extracts:
-
-* the Juju status label (Active / Blocked / Waiting / Maintenance)
-* the status message text (resolving f-string interpolations such as
-  ``{SNAP_NAME}`` and ``{MIN_REPLICAS}`` by reading those module-level
-  constants from the same AST)
-* the documentation prose (``expectations``, ``actions``, ``hidden``)
-  from the keyword arguments passed to each ``StatusLevel(...)`` call
+For each enum member it extracts the Juju status label, message text
+(resolving f-string interpolations), and documentation prose
+(``expectations``, ``actions``, ``hidden``) from the keyword arguments
+passed to each ``StatusLevel(...)`` call.
 
 Framework-level statuses (Maintenance/Error/Terminated/Unknown) are set
-by Juju itself, not by charm code, so they are not in the enum.  They
-are defined in ``_FRAMEWORK_STATUSES`` below and appended after the
-enum-derived rows.
-
-The result is emitted as MyST Markdown into
-``docs/reference/_generated/statuses.md`` (gitignored).
+by Juju itself and are defined in ``_FRAMEWORK_STATUSES`` below.
 
 Usage::
 
@@ -41,16 +32,15 @@ import sys
 from pathlib import Path
 from typing import Any
 
-# Resolve paths relative to this script so it works regardless of CWD.
-# Script:  docs/_dev/generate_statuses.py
-# Docs:    docs/
-# Repo:    (root)
+from jinja2 import Environment, FileSystemLoader
+
 _SCRIPT_PATH = Path(__file__).resolve()
 _DEV_DIR = _SCRIPT_PATH.parent
 _DOCS_DIR = _DEV_DIR.parent
 _REPO_ROOT = _DOCS_DIR.parent
 _COMMON_DIR = _REPO_ROOT / "common"
 _OUTPUT_DIR = _DOCS_DIR / "reference" / "_generated"
+_TEMPLATES_DIR = _DEV_DIR / "templates"
 
 _LITERALS_FILE = _COMMON_DIR / "single_kernel_kafka" / "core" / "literals.py"
 
@@ -59,7 +49,13 @@ _AUTOGEN_NOTICE = (
     "Edit common/single_kernel_kafka/core/literals.py and rebuild. -->"
 )
 
-# Map ops status class name -> Juju status label shown in the table.
+_env = Environment(
+    loader=FileSystemLoader(_TEMPLATES_DIR),
+    keep_trailing_newline=True,
+    trim_blocks=True,
+    lstrip_blocks=True,
+)
+
 _STATUS_LABEL: dict[str, str] = {
     "ActiveStatus": "Active",
     "BlockedStatus": "Blocked",
@@ -68,9 +64,6 @@ _STATUS_LABEL: dict[str, str] = {
     "ErrorStatus": "Error",
 }
 
-# Framework-level statuses set by Juju itself, not by charm code.
-# These are not in the Status enum; they are appended after the
-# enum-derived rows.  Edit this list to add or modify framework statuses.
 _FRAMEWORK_STATUSES: list[dict[str, str]] = [
     {
         "status": "Maintenance",
@@ -114,12 +107,7 @@ _FRAMEWORK_STATUSES: list[dict[str, str]] = [
 
 
 def _resolve_constant(tree: ast.AST, name: str) -> Any:
-    """Return the value of a module-level assignment ``name = <literal>``.
-
-    Supports simple literals (str, int) and conditional assignments where
-    the last branch wins (e.g. ``SNAP_NAME`` is reassigned inside an
-    ``if`` block).  Returns ``None`` if the name is not found.
-    """
+    """Return the value of a module-level assignment ``name = <literal>``."""
     value: Any = None
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign):
@@ -131,12 +119,7 @@ def _resolve_constant(tree: ast.AST, name: str) -> Any:
 
 
 def _eval_joinedstr(node: ast.JoinedStr, constants: dict[str, Any]) -> str:
-    """Evaluate an ``ast.JoinedStr`` (f-string) to a plain string.
-
-    ``constants`` maps variable names to their resolved values.  Only
-    simple ``{name}`` interpolations are supported — no arbitrary
-    expressions.
-    """
+    """Evaluate an ``ast.JoinedStr`` (f-string) to a plain string."""
     parts: list[str] = []
     for val in node.values:
         if isinstance(val, ast.Constant):
@@ -146,19 +129,12 @@ def _eval_joinedstr(node: ast.JoinedStr, constants: dict[str, Any]) -> str:
             if isinstance(inner, ast.Name) and inner.id in constants:
                 parts.append(str(constants[inner.id]))
             else:
-                # Fallback: best-effort for unknown interpolations.
                 parts.append(f"{{{ast.unparse(inner)}}}")
     return "".join(parts)
 
 
 def _eval_str_expr(node: ast.expr, constants: dict[str, Any]) -> str:
-    """Evaluate a string-valued expression used as a keyword value.
-
-    Handles plain string constants and f-strings.  Python concatenates
-    adjacent string literals like ``("a " "b")`` into a single
-    ``ast.Constant`` at parse time, so no special handling is needed
-    for that case.
-    """
+    """Evaluate a string-valued expression used as a keyword value."""
     if isinstance(node, ast.Constant) and isinstance(node.value, str):
         return node.value
     if isinstance(node, ast.JoinedStr):
@@ -169,18 +145,12 @@ def _eval_str_expr(node: ast.expr, constants: dict[str, Any]) -> str:
 def parse_status_enum(path: Path) -> list[dict[str, Any]]:
     """Parse the ``Status`` enum from ``literals.py`` via AST.
 
-    Returns a list of dicts in declaration order, each with keys:
-    ``name``, ``status_class``, ``message``, ``expectations``,
-    ``actions``, ``hidden`` — read from the keyword arguments passed to
-    each ``StatusLevel(...)`` call.
-
-    ``status_class`` is the raw ops class name (e.g.
-    ``"BlockedStatus"``); the caller maps it to a label.
+    Returns a list of dicts with keys: ``name``, ``status_class``,
+    ``message``, ``expectations``, ``actions``, ``hidden``.
     """
     source = path.read_text(encoding="utf-8")
     tree = ast.parse(source)
 
-    # Resolve constants that may appear in f-string messages.
     snap_name = _resolve_constant(tree, "SNAP_NAME") or "charmed-kafka"
     min_replicas = _resolve_constant(tree, "MIN_REPLICAS") or 3
     constants: dict[str, Any] = {
@@ -201,7 +171,6 @@ def parse_status_enum(path: Path) -> list[dict[str, Any]]:
                 continue
             member_name = target.id
 
-            # item.value is a Call to StatusLevel(<status_obj>, "LEVEL", **kwargs)
             call = item.value
             if not isinstance(call, ast.Call):
                 continue
@@ -215,20 +184,14 @@ def parse_status_enum(path: Path) -> list[dict[str, Any]]:
                 else None
             ) or ""
 
-            # Extract message: first positional arg to the status class.
             message = ""
             if status_arg.args:
                 msg_node = status_arg.args[0]
                 if isinstance(msg_node, ast.Constant):
-                    message = (
-                        str(msg_node.value)
-                        if msg_node.value is not None
-                        else ""
-                    )
+                    message = str(msg_node.value) if msg_node.value is not None else ""
                 elif isinstance(msg_node, ast.JoinedStr):
                     message = _eval_joinedstr(msg_node, constants)
 
-            # Extract expectations/actions/hidden from StatusLevel(...) kwargs.
             expectations = ""
             actions = ""
             hidden = False
@@ -238,9 +201,7 @@ def parse_status_enum(path: Path) -> list[dict[str, Any]]:
                 elif kw.arg == "actions":
                     actions = _eval_str_expr(kw.value, constants)
                 elif kw.arg == "hidden":
-                    hidden = bool(
-                        isinstance(kw.value, ast.Constant) and kw.value.value
-                    )
+                    hidden = bool(isinstance(kw.value, ast.Constant) and kw.value.value)
 
             statuses.append(
                 {
@@ -252,26 +213,14 @@ def parse_status_enum(path: Path) -> list[dict[str, Any]]:
                     "hidden": hidden,
                 }
             )
-        break  # only the Status enum
+        break
 
     return statuses
 
 
 # ---------------------------------------------------------------------------
-# Markdown rendering
+# Rendering
 # ---------------------------------------------------------------------------
-
-
-def _render_front_matter(description: str) -> list[str]:
-    """Return the YAML front matter lines for the generated page."""
-    return [
-        "---",
-        "myst:",
-        "  html_meta:",
-        f'    description: "{description}"',
-        "---",
-        "",
-    ]
 
 
 def _escape_cell(text: str) -> str:
@@ -281,77 +230,34 @@ def _escape_cell(text: str) -> str:
     return " ".join(text.split()).replace("|", "\\|")
 
 
-def generate_statuses_page(
-    enum_statuses: list[dict[str, Any]],
-) -> tuple[str, int, int, int]:
-    """Render the statuses reference page as MyST Markdown.
-
-    Returns a tuple of (markdown, n_shown, n_hidden, n_framework).
-    """
-    lines: list[str] = []
-    lines.extend(
-        _render_front_matter(
-            "Charmed Apache Kafka charm statuses reference - complete guide "
-            "to Juju application statuses, messages, and troubleshooting "
-            "actions."
-        )
-    )
-    lines.append(_AUTOGEN_NOTICE)
-    lines.append("")
-    lines.append("(reference-statuses)=")
-    lines.append("# Charm statuses")
-    lines.append("")
-    lines.append(
-        "A deployed charm follows [standard Juju applications statuses]"
-        "(https://canonical.com/juju/docs/juju-cli/3.6/reference/status/"
-        "#application-status). Here you can find the expected reactions on "
-        "many typical Charmed Apache Kafka statuses:"
-    )
-    lines.append("")
-    lines.append("| Juju Status | Message | Expectations | Actions |")
-    lines.append("|---|---|---|---|")
-
-    n_shown = 0
-    n_hidden = 0
-
+def _prepare_statuses(enum_statuses: list[dict[str, Any]]) -> list[dict[str, str]]:
+    """Filter and transform enum statuses into template-ready rows."""
+    rows = []
     for s in enum_statuses:
         if s.get("hidden"):
-            n_hidden += 1
             continue
-
-        label = _STATUS_LABEL.get(s["status_class"], s["status_class"] or "")
-        message = _escape_cell(s["message"])
-        expectations = _escape_cell(s.get("expectations", ""))
-        actions = _escape_cell(s.get("actions", ""))
-
-        lines.append(f"| {label} | {message} | {expectations} | {actions} |")
-        n_shown += 1
-
-    # Framework-level statuses (Terminated, Unknown, Error, …).
-    n_framework = 0
-    for fw in _FRAMEWORK_STATUSES:
-        label = str(fw.get("status", ""))
-        message = _escape_cell(str(fw.get("message", "")))
-        expectations = _escape_cell(str(fw.get("expectations", "")))
-        actions = _escape_cell(str(fw.get("actions", "")))
-        lines.append(f"| {label} | {message} | {expectations} | {actions} |")
-        n_framework += 1
-
-    lines.append("")
-    lines.append(
-        "This page is generated at build time from "
-        "[`common/single_kernel_kafka/core/literals.py`]"
-        "(https://github.com/canonical/kafka-operator/blob/main/common/"
-        "single_kernel_kafka/core/literals.py)."
-    )
-    lines.append("")
-
-    return "\n".join(lines) + "\n", n_shown, n_hidden, n_framework
+        rows.append(
+            {
+                "label": _STATUS_LABEL.get(s["status_class"], s["status_class"] or ""),
+                "message": _escape_cell(s["message"]),
+                "expectations": _escape_cell(s.get("expectations", "")),
+                "actions": _escape_cell(s.get("actions", "")),
+            }
+        )
+    return rows
 
 
-# ---------------------------------------------------------------------------
-# Validation warnings
-# ---------------------------------------------------------------------------
+def _prepare_framework_statuses() -> list[dict[str, str]]:
+    """Transform framework statuses into template-ready rows."""
+    return [
+        {
+            "label": fw["status"],
+            "message": _escape_cell(fw.get("message", "")),
+            "expectations": _escape_cell(fw.get("expectations", "")),
+            "actions": _escape_cell(fw.get("actions", "")),
+        }
+        for fw in _FRAMEWORK_STATUSES
+    ]
 
 
 def _warn_undocumented(enum_statuses: list[dict[str, Any]]) -> int:
@@ -369,11 +275,6 @@ def _warn_undocumented(enum_statuses: list[dict[str, Any]]) -> int:
     return n
 
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
-
-
 def main() -> int:
     """Generate the statuses reference page.
 
@@ -384,19 +285,31 @@ def main() -> int:
         return 1
 
     enum_statuses = parse_status_enum(_LITERALS_FILE)
-
-    # Validation warnings (non-fatal).
     _warn_undocumented(enum_statuses)
+
+    n_hidden = sum(1 for s in enum_statuses if s.get("hidden"))
+    status_rows = _prepare_statuses(enum_statuses)
+    framework_rows = _prepare_framework_statuses()
 
     _OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    page, n_shown, n_hidden, n_framework = generate_statuses_page(enum_statuses)
+    page = _env.get_template("statuses.md.j2").render(
+        description=(
+            "Charmed Apache Kafka charm statuses reference - complete guide "
+            "to Juju application statuses, messages, and troubleshooting "
+            "actions."
+        ),
+        autogen_notice=_AUTOGEN_NOTICE,
+        statuses=status_rows,
+        framework_statuses=framework_rows,
+    )
     out = _OUTPUT_DIR / "statuses.md"
     out.write_text(page, encoding="utf-8")
 
     print(
         f"Generated {out.relative_to(_REPO_ROOT)} "
-        f"({n_shown} shown, {n_hidden} hidden, {n_framework} framework)"
+        f"({len(status_rows)} shown, {n_hidden} hidden, "
+        f"{len(framework_rows)} framework)"
     )
     return 0
 
