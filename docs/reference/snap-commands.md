@@ -63,7 +63,7 @@ There are two kinds of wrapper scripts:
 * `bin-wrapper.bash` — used by most commands. It only sets default logging options before running the target script.
 * `start-wrapper.bash`/`connect-wrapper.bash` — used by `daemon`, `cruise-control` and `connect-distributed` to start their respective long-running services. In addition to setting logging options, these drop root privileges to the confined `_daemon_` user (via `setpriv`) before starting the service.
 
-`keytool` is the only command with no wrapper — it invokes the JVM's `keytool` binary directly.
+`keytool` is the only command with no wrapper — it invokes the JVM `keytool` binary directly.
 
 Both wrapper types set the `KAFKA_LOG4J_OPTS` and `KAFKA_JMX_OPTS` environment variables
 **only if they are not already set**, and point them at snap-specific paths, for example
