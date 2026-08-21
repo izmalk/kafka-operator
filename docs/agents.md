@@ -59,7 +59,7 @@ configuration keep these discoverable and correct:
    clip-rect technique in `_static/agent-directive.css`, not
    `display: none`, so it stays in the accessibility tree.
 3. **Markdown directive** — the `setup()` hook at the bottom of
-   `conf.py` prepends the same directive as a blockquote to every
+   `conf.py` adds the same directive as a quoted block at the top of every
    generated `.md` file. This runs as a `build-finished` post-processing
    step (priority 900, after `sphinx-llm`) rather than via `source-read`,
    because `sphinx-llm` derives each `llms.txt` entry's title and
@@ -79,7 +79,7 @@ READTHEDOCS=True READTHEDOCS_VERSION=4 READTHEDOCS_VERSION_TYPE=tag \
 
 Audit the result with `npx afdocs check <url> --format scorecard`.
 
-**Not fixable in this repo:** content negotiation for
+**Not fixable in this repository:** content negotiation for
 `Accept: text/markdown` and cache-header lifetimes are handled by the
 Canonical web platform / CDN in front of Read the Docs, not by Sphinx.
 
