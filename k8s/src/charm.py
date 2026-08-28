@@ -23,7 +23,8 @@ from ops import (
 )
 from ops.log import JujuLogHandler
 from ops.main import main
-from single_kernel_kafka.core.cluster import ClusterState
+from ops_tracing import Tracing
+from single_kernel_kafka.core.cluster import KafkaContext
 from single_kernel_kafka.core.literals import (
     CHARM_KEY,
     CONTAINER,
@@ -70,7 +71,7 @@ class KafkaCharm(KafkaCharmBase):
         self.pending_inactive_statuses: list[Status] = []
 
         # Common attrs init
-        self.state = ClusterState(self, substrate=self.substrate)
+        self.state = KafkaContext(self, substrate=self.substrate)
 
         self.workload = KafkaWorkload(
             container=self.unit.get_container(CONTAINER)
@@ -120,6 +121,9 @@ class KafkaCharm(KafkaCharmBase):
             alert_rules_path=LOGS_RULES_DIR,
             relation_name="logging",
         )
+
+        if self.config.profile == "testing":
+            self.tracing = Tracing(self, "charm-tracing")
 
     def _on_roles_changed(self, _):
         """Handler for `config_changed` events.

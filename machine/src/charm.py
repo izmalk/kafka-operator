@@ -19,7 +19,8 @@ from ops import (
     StatusBase,
 )
 from ops.log import JujuLogHandler
-from single_kernel_kafka.core.cluster import ClusterState
+from ops_tracing import Tracing
+from single_kernel_kafka.core.cluster import KafkaContext
 from single_kernel_kafka.core.literals import (
     CHARM_KEY,
     JMX_CC_PORT,
@@ -65,7 +66,7 @@ class KafkaCharm(KafkaCharmBase):
         self.pending_inactive_statuses: list[Status] = []
 
         # Common attrs init
-        self.state = ClusterState(self, substrate=self.substrate)
+        self.state = KafkaContext(self, substrate=self.substrate)
         self.sysctl_config = sysctl.Config(name=CHARM_KEY)
 
         self.workload = KafkaWorkload()  # Will be re-instantiated for each role.
@@ -83,6 +84,8 @@ class KafkaCharm(KafkaCharmBase):
             logs_rules_dir=LOGS_RULES_DIR,
             log_slots=[f"{self.workload.SNAP_NAME}:{slot}" for slot in self.workload.LOG_SLOTS],
         )
+        if self.config.profile == "testing":
+            self.tracing = Tracing(self, "charm-tracing")
 
         self.framework.observe(getattr(self.on, "install"), self._on_install)
         self.framework.observe(getattr(self.on, "remove"), self._on_remove)
