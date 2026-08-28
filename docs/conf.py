@@ -2,6 +2,7 @@
 
 import datetime
 import os
+import pathlib
 import textwrap
 
 import yaml
@@ -352,8 +353,6 @@ def _inject_agent_directive(app, exception):
         return
     if app.builder.name not in ("html", "dirhtml"):
         return
-
-    import pathlib
 
     outdir = pathlib.Path(app.builder.outdir)
     for md_file in outdir.rglob("*.md"):
