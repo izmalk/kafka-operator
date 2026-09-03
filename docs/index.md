@@ -27,15 +27,13 @@ application integration, and monitoring.
 
 ### Tutorial
 
-> We recommend all new users to start from our step-by-step [Tutorial](tutorial-introduction).
-  Follow all the steps to learn basic operations and procedures.
+New to Charmed Apache Kafka? Start with the step-by-step Tutorial to learn the essentials:
 
 ````{domain} Tutorial
 
 ```{slice} Tutorial
 {doc}`Introduction </tutorial/index>`
 {doc}`Step 1: Environment setup </tutorial/environment>`
-{doc}`Requirements </reference/requirements>`
 ```
 ````
 
@@ -49,6 +47,7 @@ application integration, and monitoring.
 {doc}`AWS </how-to/deploy/deploy-aws>`
 {doc}`Azure </how-to/deploy/deploy-azure>`
 {doc}`Juju Spaces </how-to/deploy/deploy-spaces>`
+{doc}`Requirements </reference/requirements>`
 ```
 
 ```{slice} Operations
