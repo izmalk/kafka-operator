@@ -25,28 +25,31 @@ application integration, and monitoring.
 
 ## In this documentation
 
-````{domain} Getting started
+### Tutorial
 
-```{slice} Getting started
+> We recommend all new users to start from our step-by-step [Tutorial](tutorial-introduction).
+  Follow all the steps to learn basic operations and procedures.
+
+````{domain} Tutorial
+
+```{slice} Tutorial
 {doc}`Introduction </tutorial/index>`
-{doc}`Environment setup </tutorial/environment>`
+{doc}`Step 1: Environment setup </tutorial/environment>`
 {doc}`Requirements </reference/requirements>`
 ```
 ````
 
+### Lifecycle
+
 ````{domain} Deployment
 
 ```{slice} Deployment
-{doc}`Deploy </how-to/deploy/index>`
 {doc}`Juju CLI </how-to/deploy/deploy-anywhere>`
 {doc}`Terraform </how-to/deploy/deploy-terraform>`
 {doc}`AWS </how-to/deploy/deploy-aws>`
 {doc}`Azure </how-to/deploy/deploy-azure>`
 {doc}`Juju Spaces </how-to/deploy/deploy-spaces>`
 ```
-````
-
-````{domain} Operations
 
 ```{slice} Operations
 {doc}`Connections management </how-to/client-connections>`
@@ -55,9 +58,6 @@ application integration, and monitoring.
 {doc}`Listeners </reference/listeners>`
 {doc}`Statuses </reference/_generated/statuses>`
 ```
-````
-
-````{domain} Maintenance
 
 ```{slice} Maintenance
 {doc}`Version upgrade </how-to/upgrade>`
@@ -66,29 +66,6 @@ application integration, and monitoring.
 {doc}`MirrorMaker </explanation/mirrormaker2-0>`
 {doc}`Backups </explanation/backups>`
 ```
-````
-
-````{domain} Security
-
-```{slice} Security
-{doc}`Overview </explanation/security>`
-{doc}`Enable encryption </how-to/tls-encryption>`
-{doc}`mTLS </how-to/create-mtls-client-credentials>`
-{doc}`OAuth </how-to/oauth>`
-{doc}`Cryptography </explanation/cryptography>`
-```
-````
-
-````{domain} Extensions
-
-```{slice} Extensions
-{doc}`Kafka Connect </how-to/kafka-connect>`
-{doc}`Schema registry </how-to/schemas-serialisation>`
-{doc}`Kafka UI </how-to/kafka-ui>`
-```
-````
-
-````{domain} Internals
 
 ```{slice} Internals
 {doc}`Snap commands </reference/snap-commands>`
@@ -98,6 +75,26 @@ application integration, and monitoring.
 {doc}`Release notes </reference/release-notes/index>`
 ```
 ````
+
+### Features
+
+````{domain} Features
+
+```{slice} Security
+{doc}`Overview </explanation/security>` slice
+{doc}`Enable encryption </how-to/tls-encryption>`
+{doc}`mTLS </how-to/create-mtls-client-credentials>`
+{doc}`OAuth </how-to/oauth>`
+{doc}`Cryptography </explanation/cryptography>`
+```
+
+```{slice} Extensions
+{doc}`Kafka Connect </how-to/kafka-connect>`
+{doc}`Schema registry </how-to/schemas-serialisation>`
+{doc}`Kafka UI </how-to/kafka-ui>`
+```
+````
+
 
 ## How the documentation is organised
 
