@@ -174,7 +174,12 @@ templates_path = [
 #       --fail-on-warning. Uncomment when redirects are needed:
 # rediraffe_redirects = "redirects.txt"
 
-redirects = {}
+redirects = {
+    "reference/snap-commands": "../cli-utilities/",
+    "reference/release-notes/revision-248": "../machine/revision-248/",
+    "reference/release-notes/k8s-revision-82": "../k8s/revision-82/",
+    "reference/release-notes/k8s-revision-56-51": "../k8s/revision-56-51/",
+}
 
 
 ############################
