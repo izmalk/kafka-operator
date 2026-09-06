@@ -4,20 +4,21 @@
 options:
   system-users:
     description: |
-      User-provided secret ID which defines custom username/passwords on the Kafka Connect
+      User-provided secret ID which defines the username/password for the Kafka Connect
       REST Interface. The secret ID format is like "secret:cvh7kruupa1s46bqvuig" and should
       not be confused with secret name or label.
 
-      The secret could be defined using `juju add-secret <secret-name> u1=p1 u2=p2 ...`
-      command, where keys (u1..n) are usernames and values (p1..n) are passwords.
+      The secret could be defined using `juju add-secret <secret-name> admin=<password>`
+      command, where the key must be `admin` (the built-in Kafka Connect administrator
+      user) and the value is its password.
       The `juju add-secret` command will output the secret ID, which can then be granted to
-      the charm and configured using `juju config` command. The following example 
+      the charm and configured using `juju config` command. The following example
       shows the complete flow:
 
-        $ juju add-secret my-auth admin=adminpass user1=user1pass user2=user2pass
+        $ juju add-secret my-auth admin=adminpass
         # some ID will be printed: e.g. "secret:cvh7kruupa1s46bqvuig". take note of that.
         $ juju grant-secret my-auth kafka-connect
-        $ juju config kafka-connect auth=secret:cvh7kruupa1s46bqvuig
+        $ juju config kafka-connect system-users=secret:cvh7kruupa1s46bqvuig
     type: string
   exactly_once_source_support:
     description: |

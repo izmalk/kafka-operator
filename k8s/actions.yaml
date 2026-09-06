@@ -5,7 +5,9 @@ get-listeners:
   description: Get all active listeners and their port allocations
 
 rebalance:
-  description: Trigger a rebalance of cluster partitions based on configured goals
+  description: |
+    Trigger a rebalance of cluster partitions based on configured goals.
+    This action must be run on the leader unit of an application with the 'balancer' role.
   params:
     mode:
       type: string
@@ -19,7 +21,9 @@ rebalance:
       type: boolean
       default: true
     brokerid:
-      description: Broker ID newly added to the cluster or to be removed. The broker ID is the unit number, e.g. kafka/0 is broker 0.
+      description: |
+        Broker ID newly added to the cluster or to be removed. Required for 'add' and 'remove' modes.
+        The broker ID is the unit ID offset by 100, e.g. kafka/0 is broker 100, kafka/3 is broker 103.
       type: integer
       minimum: 0
   required: [mode]

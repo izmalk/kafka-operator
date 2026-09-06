@@ -19,7 +19,7 @@ options:
     description: |
       User-provided secret ID which defines internal username/passwords on the Apache Kafka cluster.
       The secret ID format is like "secret:cvh7kruupa1s46bqvuig" and should not be confused with secret name or label.
-      The secret could be defined using `juju add-secret <secret-name> <user>=<admin-password>` command, where `<user>` is one of the internal users defined by the charm: `sync` or `admin`.
+      The secret could be defined using `juju add-secret <secret-name> <user>=<password>` command, where `<user>` is one of the internal users defined by the charm: `operator` or `replication`.
       The `juju add-secret` command will output the secret ID, which can then be granted to the charm and configured using `juju config` command.
     type: string
   compression-type:
@@ -75,7 +75,7 @@ options:
     type: string
     default: "0"
   log-cleanup-policy:
-    description: "The default cleanup policy for segments beyond the retention window. A comma separated list of valid policies. Valid policies are: 'delete' and 'compact'"
+    description: "The default cleanup policy for segments beyond the retention window. Valid policies are: 'delete' and 'compact'. Only a single policy may be set."
     type: string
     default: delete
   log-message-timestamp-type:
@@ -103,7 +103,7 @@ options:
     type: string
     default: ""
   extra-listeners:
-    description: "Config options to add extra SANs to the ones used when requesting server certificates, and to define custom `advertised.listeners` and ports for clients external to the Juju model. These items are comma-separated. Use '{unit}' as a placeholder to be filled with the unit number if necessary. For port allocations, providing the port for a given listener will offset the generated port number by that amount, with an accepted value range of 20001-50000. For example, a provided value of 'worker-{unit}.domain.com:30000' will generate listeners for unit 0 with name 'worker-0.domain.com', and be allocated ports 39092, 39093 etc for each authentication scheme."
+    description: "Config options to add extra SANs to the ones used when requesting server certificates, and to define custom `advertised.listeners` and ports for clients external to the Juju model. These items are comma-separated. Use '{unit}' as a placeholder to be filled with the unit number if necessary. For port allocations, providing the port for a given listener will offset the generated port number by that amount, with an accepted value range of 20001-49999. For example, a provided value of 'worker-{unit}.domain.com:30000' will generate listeners for unit 0 with name 'worker-0.domain.com', and be allocated ports 39092, 39093 etc for each authentication scheme."
     type: string
     default: ""
   log-level:
