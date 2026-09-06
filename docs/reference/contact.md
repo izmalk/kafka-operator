@@ -12,9 +12,11 @@ Contact Canonical Data Platform team in [Matrix](https://matrix.to/#/#charmhub-d
 Report ideas and issues for either charm in the
 [unified Kafka operator repository](https://github.com/canonical/kafka-operator/issues/new).
 
-Security issues should be reported through [Launchpad](https://wiki.ubuntu.com/DebuggingSecurity#How_to_File).
+Security issues should be reported through
+[GitHub private vulnerability reporting](https://github.com/canonical/kafka-operator/security/advisories/new),
+as described in the repository [security policy](https://github.com/canonical/kafka-operator/blob/main/SECURITY.md).
 
-Please do NOT file GitHub issues on security topics.
+Please do NOT file public GitHub issues on security topics.
 
 ## Useful links
 
