@@ -1,12 +1,11 @@
-"""Configuration for the Sphinx documentation builder."""
-
 import datetime
 import json
 import os
-import pathlib
 import textwrap
+from pathlib import Path
 
-import yaml
+# Based on canonical/sphinx-stack main at
+# cfc887196ebfd8aed0a0ed69515e524a133a4308 (2026-10-13).
 
 # Configuration for the Sphinx documentation builder.
 # All configuration specific to your project should be done in this file.
@@ -17,10 +16,9 @@ import yaml
 # A complete list of built-in Sphinx configuration values:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 #
-# The Sphinx Stack uses the Canonical Sphinx theme to keep all
-# documentation consistent and on brand:
+# The Sphinx Stack uses the Canonical Sphinx theme to keep all documentation consistent
+# and on brand:
 # https://github.com/canonical/canonical-sphinx
-
 
 #######################
 # Project information #
@@ -35,31 +33,30 @@ author = "Canonical Ltd."
 # The year in the copyright statement
 copyright = f"{datetime.date.today().year}"
 
-# Sidebar documentation title; best kept reasonably short.
+# Sidebar documentation title
 # To disable the title, set it to an empty string.
 html_title = project + " documentation"
 
-# Project slug; see https://meta.discourse.org/t/what-is-category-slug/87897
-slug = "data/kafka/docs"
-
-# Read the Docs version segment ('4', 'latest', ...); 'local' for local builds
-version_slug = os.environ.get("READTHEDOCS_VERSION", "local")
-
 # Documentation website URL
-ogp_site_url = "https://canonical.com/data/kafka/docs/"
-
-# NOTE: 'ogp_site_url' is intentionally version-less so social previews point at
-#       the default version. 'html_baseurl' (below) is version-qualified because
-#       sitemap.xml and llms.txt links must resolve to real pages.
+slug = "data/kafka/docs"
+version_slug = os.environ.get("READTHEDOCS_VERSION", "local")
+# Hosted canonical URLs take precedence; local builds retain Kafka's public route.
+# The version segment and trailing slash are required for sitemap and LLM links.
+_site_url = os.environ.get("READTHEDOCS_CANONICAL_URL") or (
+    f"https://canonical.com/{slug}/{version_slug}/"
+)
+ogp_site_url = _site_url.rstrip("/") + "/"
 
 # Preview name of the documentation website
+# TODO: To use a different name for the project in previews, update the next line.
 ogp_site_name = project
 
 # Preview image URL
+# TODO: To customise the preview image, update the next line.
 ogp_image = "https://assets.ubuntu.com/v1/cc828679-docs_illustration.svg"
 
 # Product favicon; shown in bookmarks, browser tabs, etc.
-# TODO: To customise the favicon, uncomment and update as needed.
+# TODO: To customise the favicon, uncomment and update the next line.
 # html_favicon = "_static/favicon.png"
 
 # Dictionary of values to pass into the Sphinx context for all pages:
@@ -71,44 +68,37 @@ html_context = {
     # TODO: To add a tag image, uncomment and update as needed.
     # 'product_tag': '_static/tag.png',
     # Your Discourse instance URL
-    "discourse": "https://discourse.charmhub.io",
+    "discourse": "https://discourse.charmhub.io/tag/kafka",
+    "discourse_prefix": "https://discourse.charmhub.io/t/",
     # Your Mattermost channel URL
-    "mattermost": "https://chat.canonical.com/canonical/channels/documentation",
+    "mattermost": "",
     # Your Matrix channel URL
-    "matrix": "https://matrix.to/#/#documentation:ubuntu.com",
-    # Your documentation GitHub repository URL.
-    # If set, links for viewing the documentation source files and creating
-    # GitHub issues are added at the bottom of each page.
+    "matrix": "https://matrix.to/#/#charmhub-data-platform:ubuntu.com",
+    # Your documentation GitHub repository URL If set, links for viewing the
+    # documentation source files and creating GitHub issues are added at the bottom of
+    # each page.
     "github_url": "https://github.com/canonical/kafka-operator",
     # Docs branch in the repo; used in links for viewing the source files
     "repo_default_branch": "main",
     # Docs location in the repo; used in links for viewing the source files
     "repo_folder": "/docs/",
-    # To enable or disable the Previous / Next buttons at the bottom of pages
     # Valid options: none, prev, next, both
     "sequential_nav": "both",
-    # To enable listing contributors on individual pages, set to True
+    # TODO: To enable listing contributors on individual pages, set to True
     "display_contributors": False,
     # Required for feedback button
     "github_issues": "enabled",
     # Passes the top-level 'author' value to the theme
     "author": author,
-    # Absolute URL of llms.txt; used by '_templates/header.html' to render the
-    # agent-facing discovery directive on every page
-    "llms_txt_url": f"https://canonical.com/{slug}/{version_slug}/llms.txt",
+    "llms_txt_url": ogp_site_url + "llms.txt",
     # Documentation license information
     "license": {
-        "name": "CC-BY-SA",
+        "name": "CC-BY-SA-4.0",
         "url": "https://creativecommons.org/licenses/by-sa/4.0/",
     },
 }
 
-# To enable the edit button on pages, uncomment and change the link to a
-# public repository on GitHub or Launchpad. Any of the following link domains
-# are accepted:
-# - https://github.com/example-org/example"
-# - https://launchpad.net/example
-# - https://git.launchpad.net/example
+# Enable source editing against Kafka's repository, not the template repository.
 html_theme_options = {
     "source_edit_link": "https://github.com/canonical/kafka-operator",
 }
@@ -117,26 +107,18 @@ html_theme_options = {
 # Sitemap configuration: https://sphinx-sitemap.readthedocs.io/
 #######################
 
-# Base URL of RTD hosted project.
-#
-# NOTE: The version segment (e.g. '4', 'latest') MUST be included, because the
-#       published docs are served under 'https://canonical.com/<slug>/<version>/'.
-#       Without it, every URL emitted into sitemap.xml and llms.txt points at a
-#       non-existent path and returns 404.
-#
-# NOTE: The trailing slash is REQUIRED. sphinx-sitemap concatenates
-#       'html_baseurl' with each page's relative link (see 'sitemap_url_scheme'
-#       below); without the trailing slash the version segment merges into the
-#       next path segment (e.g. '.../docs/4how-to/monitoring/').
-html_baseurl = f"https://canonical.com/{slug}/{version_slug}/"
+# Use RTD canonical URL to ensure duplicate pages have a specific canonical URL
+html_baseurl = ogp_site_url
 
-# sphinx-sitemap uses html_baseurl to generate the full URL for each page
+# sphinx-sitemap uses html_baseurl to generate the full URL for each page:
 sitemap_url_scheme = "{link}"
 
-# Include `lastmod` dates in the sitemap
+# Include `lastmod` dates in the sitemap:
 sitemap_show_lastmod = True
 
-# Pages excluded from the sitemap
+# TODO: Exclude pages that aren't user-facing from the sitemap (e.g., module pages
+# generated by autodoc).
+# Pages excluded from the sitemap:
 sitemap_excludes = [
     "404/",
     "genindex/",
@@ -147,19 +129,14 @@ sitemap_excludes = [
 # Template and asset locations #
 ################################
 
-html_static_path = [
-    "_static",
-]
-
-templates_path = [
-    "_templates",
-]
+html_static_path = ["_static"]
+templates_path = ["_templates"]
 
 #############
 # Redirects #
 #############
 
-# To set up redirects using sphinx-rerediraffe:
+# Add redirects to the 'redirects.txt' file
 # https://sphinxext-rediraffe.readthedocs.io/en/latest/
 
 # To set up redirects in the Read the Docs project dashboard:
@@ -167,17 +144,23 @@ templates_path = [
 
 rediraffe_redirects = "redirects.txt"
 
+# Strips '/index.html' from destination URLs when building with 'dirhtml'
+rediraffe_dir_only = True
+
 
 ############################
 # sphinx-llm configuration #
 ############################
 
-# This description is included in llms.txt to provide some initial context for
-# your product docs.
-llms_txt_description = textwrap.dedent("""\
-    This is the documentation for Charmed Apache Kafka, an automated
-    deployment and management solution for Apache Kafka on Ubuntu.
-    """)
+# This description is included in llms.txt to provide some initial context for your
+# product docs.
+llms_txt_description = textwrap.dedent(
+    """\
+    This is the documentation for Charmed Apache Kafka, an open-source operator
+    that simplifies the deployment, scaling, and management of Apache Kafka
+    clusters on physical hardware, virtual machines, and Kubernetes.
+    """
+)
 
 # The base URL for references built by sphinx-markdown-builder.
 if os.environ.get("READTHEDOCS"):
@@ -189,21 +172,22 @@ if os.environ.get("READTHEDOCS"):
 
 # A regex list of URLs that are ignored by 'make linkcheck'
 linkcheck_ignore = [
-    "http://127.0.0.1:8000",
-    "https://github.com/canonical/ACME/*",
-    "https://matrix.to/#/#charmhub-data-platform:ubuntu.com",
-    "https://us-east-1.console.aws.amazon.com/ec2/",
-    "https://launchpad.net/soss",
-    "https://cwiki.apache.org/*",
-    "https://archive.apache.org/*",
+    r"http://127\.0\.0\.1:8000(?:/|$)",
+    r"https://github\.com/canonical/ACME(?:/|$)",
+    r"https://matrix\.to/#/#charmhub-data-platform:ubuntu\.com$",
+    r"https://us-east-1\.console\.aws\.amazon\.com/ec2/",
+    r"https://launchpad\.net/soss(?:/|$)",
+    r"https://cwiki\.apache\.org/",
+    r"https://archive\.apache\.org/",
     r"http://worker-\d+\.domain\.com.*",
-    "https://canonical.com/data/kafka#get-in-touch",
+    r"https://canonical\.com/data/kafka#get-in-touch$",
 ]
 
 # A regex list of URLs where anchors are ignored by 'make linkcheck'
 linkcheck_anchors_ignore_for_url = [r"https://github\.com/.*"]
 
 # How long the link checker will wait for a response for each request
+# TODO: Decrease to improve run time or increase if links frequently time out.
 # linkcheck_timeout = 30
 
 # Give linkcheck multiple tries on failure
@@ -228,6 +212,7 @@ extensions = [
     "notfound.extension",
     "sphinx_design",
     "sphinx_rerediraffe",
+    "sphinx_reredirects",
     "sphinx_tabs.tabs",
     "sphinxcontrib.jquery",
     "sphinxcontrib.mermaid",
@@ -254,86 +239,25 @@ exclude_patterns = [
     "agents.md",
     ".venv*",
     "_dev",
+    "_build",
+    "_build-*",
 ]
 
-# Adds custom CSS files, located under 'html_static_path'
+# Adds custom CSS files, located remotely or in 'html_static_path'.
 html_css_files = [
     "cookie-banner.css",
+    "code-contrast.css",
     "agent-directive.css",
     "brand-theme.sphinx-dark.css",
     "mermaid-brand-patch.css",
 ]
 
-# Adds custom JavaScript files, located under 'html_static_path'
-html_js_files = [
-    "bundle.js",
-    "overwritelinks.js",
-]
-
-#########################
-# Mermaid configuration #
-#########################
-
-# Diagram styling comes from the Canonical Mermaid brand kit, so that design
-# changes are picked up from upstream instead of being maintained here:
-# https://github.com/canonical/mermaid-brand-kit
-#
-# Two generated artifacts are vendored into '_static/' from it:
-#   - 'brand-theme.light.config.json'  -> the light palette, loaded below
-#   - 'brand-theme.sphinx-dark.css'    -> repaints diagrams for dark mode
-#
-# '_static/mermaid-brand-patch.css' carries the few local overrides that the
-# generated artifacts cannot express; see the comments in that file.
-#
-# Setup follows 'docs/live-mermaid-in-sphinx.md' in the kit.
-
-_brand_theme = json.loads(
-    (pathlib.Path(__file__).parent / "_static" / "brand-theme.light.config.json").read_text(
-        encoding="utf-8"
-    )
-)
-
-# Render client-side, so diagrams follow the reader's light/dark preference.
-mermaid_output_format = "raw"
-
-# The extension overwrites 'theme' after 'mermaid_init_config' is applied. Pin
-# both modes to 'base' so any variable the brand config leaves derived is
-# resolved from a neutral theme rather than a stock Mermaid palette.
-mermaid_light_theme = "base"
-mermaid_dark_theme = "base"
-
-# The Mermaid release the vendored artifacts are validated against.
-mermaid_version = "11.15.0"
-
-# NOTE: The brand config sets 'flowchart.defaultRenderer = "elk"', but an ELK
-#       flowchart emits 'aria-roledescription="flowchart-elk"' while the
-#       vendored dark stylesheet only matches 'flowchart-v2' and 'sequence'.
-#       Left as-is, dark mode silently does not apply to any flowchart. Force
-#       the dagre renderer so the emitted role matches the stylesheet.
-#
-#       This is a known upstream defect, recorded as blocker 'B1' in the kit's
-#       own 'AGENT-INBOX.md'. Remove this override, and set
-#       'mermaid_include_elk = True' with 'mermaid_elk_version = "0.2.1"', once
-#       a kit release adds 'flowchart-elk' to the stylesheet's family gate.
-mermaid_include_elk = False
-mermaid_init_config = {
-    **_brand_theme,
-    "startOnLoad": False,
-    "flowchart": {**_brand_theme["flowchart"], "defaultRenderer": "dagre"},
-}
-
-# The extension owns the render lifecycle; 'startOnLoad' must stay false above.
-#
-# The fullscreen modal clones SVG IDs and adds another render surface. The kit
-# recommends leaving it off until that modal has been tested for focus handling,
-# accessible names, duplicate IDs, and theme switching.
-mermaid_fullscreen = False
+# Adds custom JavaScript files, located remotely or in 'html_static_path'.
+html_js_files = ["bundle.js", "overwritelinks.js"]
 
 # Appends extra markup to the end of every document written in reST
-rst_epilog = """
-.. include:: /reuse/links.txt
-.. include:: /reuse/substitutions.txt
-"""
+# rst_epilog = """
+# """
 
 # Feedback button at the top; enabled by default
 # TODO: Disable the button if your project is unsuitable for public feedback.
@@ -363,62 +287,56 @@ rst_prolog = """
     :class: vale-ignore
 """
 
-# Workaround for https://github.com/canonical/canonical-sphinx/issues/34
-if "discourse_prefix" not in html_context and "discourse" in html_context:
-    html_context["discourse_prefix"] = html_context["discourse"] + "/t/"
-
-# Workaround for substitutions.yaml
-if os.path.exists("./reuse/substitutions.yaml"):
-    with open("./reuse/substitutions.yaml", "r") as fd:
-        myst_substitutions = yaml.safe_load(fd.read())
-
-
-#############################################
-# Agent-facing directive in Markdown output #
-#############################################
-
-# The Agent-Friendly Docs spec (https://agentdocsspec.com/spec/) requires an
-# llms.txt pointer in *both* the HTML and the Markdown representation of every
-# page.  The HTML side is handled by '_templates/header.html'; this hook handles
-# the Markdown side.
+# Configuration for Intersphinx projects
 #
-# The directive is injected as a post-processing step on the finished build
-# output rather than via a 'source-read' hook, because sphinx-llm derives each
-# llms.txt entry's title and fallback description from the *first* heading and
-# paragraph of the generated Markdown.  Prepending a blockquote to the sources
-# would be picked up as the page description for any page without an explicit
-# 'html_meta' description.
+# intersphinx_mapping = {
+#     "snap": ("https://snapcraft.io/docs/", None),
+# }
+
+# Kafka Mermaid brand artifacts are a matched, generated pair; do not edit them
+# by hand. See agents.md for their provenance and dark-mode verification.
+_brand_theme = json.loads(
+    (Path(__file__).parent / "_static" / "brand-theme.light.config.json").read_text(
+        encoding="utf-8"
+    )
+)
+mermaid_output_format = "raw"
+mermaid_light_theme = "base"
+mermaid_dark_theme = "base"
+mermaid_version = "11.15.0"
+# ELK emits flowchart-elk, which the vendored dark stylesheet does not support.
+# Keep dagre until the brand kit adds that family (upstream blocker B1).
+mermaid_include_elk = False
+mermaid_init_config = {
+    **_brand_theme,
+    "startOnLoad": False,
+    "flowchart": {**_brand_theme["flowchart"], "defaultRenderer": "dagre"},
+}
+# The fullscreen modal clones SVG IDs; leave it disabled until audited.
+mermaid_fullscreen = False
 
 _AGENT_DIRECTIVE_MARKER = "<!-- agent-directive -->"
-
 _AGENT_DIRECTIVE = textwrap.dedent(f"""\
     {_AGENT_DIRECTIVE_MARKER}
     > For the complete documentation index, see
-    > [llms.txt](https://canonical.com/{slug}/{version_slug}/llms.txt).
+    > [llms.txt]({html_context['llms_txt_url']}).
     > Every page is also available as Markdown: append `index.html.md` to any
     > page URL, or request it with the `Accept: text/markdown` header.
     """)
 
 
 def _inject_agent_directive(app, exception):
-    """Prepend the agent-facing llms.txt directive to each generated .md file."""
-    if exception is not None:
-        return
-    if not getattr(app.config, "llms_txt_enabled", True):
+    """Add discovery metadata after sphinx-llm has extracted page descriptions."""
+    if exception is not None or not getattr(app.config, "llms_txt_enabled", True):
         return
     if app.builder.name not in ("html", "dirhtml"):
         return
-
-    outdir = pathlib.Path(app.builder.outdir)
-    for md_file in outdir.rglob("*.md"):
+    for md_file in Path(app.builder.outdir).rglob("*.md"):
         content = md_file.read_text(encoding="utf-8")
-        if _AGENT_DIRECTIVE_MARKER in content:
-            continue
-        md_file.write_text(f"{_AGENT_DIRECTIVE}\n{content}", encoding="utf-8")
+        if _AGENT_DIRECTIVE_MARKER not in content:
+            md_file.write_text(f"{_AGENT_DIRECTIVE}\n{content}", encoding="utf-8")
 
 
 def setup(app):
-    """Register local Sphinx hooks."""
-    # Priority 900 ensures this runs after sphinx-llm's 'combine_builds'
-    # (priority 101), which is what creates the .md files in the output dir.
+    """Run after sphinx-llm's combine_builds handler (priority 101)."""
     app.connect("build-finished", _inject_agent_directive, priority=900)

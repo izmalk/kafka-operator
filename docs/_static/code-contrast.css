@@ -1,0 +1,13 @@
+/* Canonical syntax colours need a white surface for WCAG AA contrast.
+ * The upstream grey (#f2f2f2) gives strings/operators only 4.31/4.28:1.
+ * Preserve syntax colours and the upstream dark palette; change light mode only.
+ */
+body[data-theme="light"] .highlight {
+    background-color: #ffffff;
+}
+
+@media (prefers-color-scheme: light) {
+    body:not([data-theme="dark"]) .highlight {
+        background-color: #ffffff;
+    }
+}

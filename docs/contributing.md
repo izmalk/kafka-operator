@@ -198,6 +198,10 @@ help you when working on new features or bug fixes.
 The documentation lives in the `docs/` folder of this repository and is built with
 [Sphinx](https://www.sphinx-doc.org/) from MyST Markdown sources. It is published on Read the Docs.
 
+Build scaffolding follows the upstream [Sphinx Stack](https://github.com/canonical/sphinx-stack).
+Kafka-specific reference generation and formatting targets are isolated in `docs/_dev/kafka.mk` so
+that upstream `Makefile` updates remain easy to review.
+
 ### Prerequisites
 
 - A
@@ -277,6 +281,9 @@ make linkcheck  # verify all external links
 make lint-md    # Markdown linting
 make spelling   # Vale spelling check
 make woke       # inclusive-language check
+make vale       # style-guide error checks
+make mdformat-check  # verify MyST formatting
+make pa11y      # accessibility checks (requires Node.js and Chromium)
 ```
 
 ```{note}

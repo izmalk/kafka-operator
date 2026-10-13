@@ -4,6 +4,7 @@
 
 # You can set these variables from the command line, and also
 # from the environment for the first two.
+
 DEV_DIR          ?= _dev
 SPHINX_OPTS      ?= -c . -d $(DEV_DIR)/.doctrees -j auto
 SPHINX_BUILD     ?= $(DOCS_VENVDIR)/bin/sphinx-build
@@ -18,12 +19,9 @@ DOCS_PDFPACKAGES ?= latexmk fonts-freefont-otf texlive-latex-recommended texlive
 DOCS_VOCAB       ?= $(DEV_DIR)/styles/config/vocabularies/Canonical
 VALE_DIR         ?= $(DOCS_VENVDIR)/lib/python*/site-packages/vale
 VALE_CONFIG      ?= $(DEV_DIR)/vale.ini
-MDFORMAT_DIR     ?= $(DEV_DIR)/mdformat
-MDFORMAT_VENVDIR ?= $(MDFORMAT_DIR)/.venv
-MDFORMAT_CMD     ?= $(MDFORMAT_VENVDIR)/bin/mdformat
 PA11Y_CMD        ?= $(DEV_DIR)/node_modules/pa11y/bin/pa11y.js --config $(DEV_DIR)/pa11y.json
 CONFIRM_SUDO     ?= N
-CHECK_PATH       ?= $(filter-out $(DOCS_VENVDIR) $(DOCS_BUILDDIR) $(DEV_DIR),$(wildcard *))
+CHECK_PATH       ?= $(filter-out $(DOCS_VENVDIR) $(DOCS_BUILDDIR) $(DEV_DIR) _build-%,$(wildcard *))
 
 # Put it first so that "make" without argument is like "make help".
 help:
@@ -36,8 +34,6 @@ help:
 	@echo "* clean full environment:                    make clean"
 	@echo "* check links:                               make linkcheck"
 	@echo "* check markdown:                            make lint-md"
-	@echo "* format markdown:                           make mdformat"
-	@echo "* check markdown formatting:                 make mdformat-check"
 	@echo "* check spelling:                            make spelling"
 	@echo "* check spelling (without building again):   make spellcheck"
 	@echo "* check inclusive language:                  make woke"
@@ -49,9 +45,9 @@ help:
 	@echo
 
 .PHONY: help full-help html epub pdf linkcheck spelling spellcheck woke \
-        vale pa11y run serve install pa11y-install \
+        vale pa11y run serve install pa11y-install   \
         vale-install pdf-prep pdf-prep-force clean clean-doc \
-        update lint-md mdformat mdformat-check mdformat-install mdformat-lock
+        update lint-md
 
 full-help: $(DOCS_VENVDIR)
 	@. $(DOCS_VENV); $(SPHINX_BUILD) -M help "$(DOCS_SOURCEDIR)" "$(DOCS_BUILDDIR)" $(SPHINX_OPTS) $(O)
@@ -71,7 +67,7 @@ $(DOCS_VENVDIR):
 	@touch $(DOCS_VENVDIR)
 
 pa11y-install:
-	@command -v $(PA11Y_CMD) >/dev/null || { \
+	@test -x $(firstword $(PA11Y_CMD)) >/dev/null || { \
 			echo "Installing \"pa11y\" from npm..."; echo; \
 			mkdir -p $(DEV_DIR)/node_modules/ ; \
 			npm install --prefix $(DEV_DIR) pa11y; \
@@ -82,21 +78,14 @@ pymarkdownlnt-install: install
 
 install: $(DOCS_VENVDIR)
 
-# Auto-generate reference pages from charm source files (actions.yaml,
-# config.yaml, statuses enum). Output is gitignored under
-# docs/reference/_generated/.
-generate: install
-	@. $(DOCS_VENV); python3 $(DEV_DIR)/generate_charm_reference.py
-	@. $(DOCS_VENV); python3 $(DEV_DIR)/generate_statuses.py
-
-run: install generate
+run: install
 	. $(DOCS_VENV); $(DOCS_VENVDIR)/bin/sphinx-autobuild -b dirhtml --host $(SPHINX_HOST) --port $(SPHINX_PORT) "$(DOCS_SOURCEDIR)" "$(DOCS_BUILDDIR)" $(SPHINX_OPTS) $(SPHINX_AUTOBUILD_OPTS)
 
-# Doesn't depend on $(DOCS_BUILDDIR) to rebuild properly at every run.
-html: install generate
+# Does not depend on $(DOCS_BUILDDIR) to rebuild properly at every run.
+html: install
 	. $(DOCS_VENV); $(SPHINX_BUILD) --fail-on-warning --keep-going -b dirhtml "$(DOCS_SOURCEDIR)" "$(DOCS_BUILDDIR)" -w $(DEV_DIR)/warnings.txt $(SPHINX_OPTS)
 
-epub: install generate
+epub: install
 	. $(DOCS_VENV); $(SPHINX_BUILD) -b epub "$(DOCS_SOURCEDIR)" "$(DOCS_BUILDDIR)" -w $(DEV_DIR)/warnings.txt $(SPHINX_OPTS)
 
 serve: html
@@ -105,7 +94,6 @@ serve: html
 clean: clean-doc
 	@test ! -e "$(DOCS_VENVDIR)" -o -d "$(DOCS_VENVDIR)" -a "$(abspath $(DOCS_VENVDIR))" != "$(DOCS_VENVDIR)"
 	rm -rf $(DOCS_VENVDIR)
-	rm -rf $(MDFORMAT_VENVDIR)
 	rm -rf $(DEV_DIR)/node_modules/
 	rm -rf $(DEV_DIR)/styles
 	rm -rf $(VALE_CONFIG)
@@ -114,7 +102,7 @@ clean-doc:
 	git clean -fx "$(DOCS_BUILDDIR)"
 	rm -rf $(DEV_DIR)/.doctrees
 
-linkcheck: install generate
+linkcheck: install
 	. $(DOCS_VENV) ; $(SPHINX_BUILD) -b linkcheck -q "$(DOCS_SOURCEDIR)" "$(DOCS_BUILDDIR)" $(SPHINX_OPTS) || { grep --color -F "[broken]" "$(DOCS_BUILDDIR)/output.txt"; exit 1; }
 	exit 0
 
@@ -128,12 +116,7 @@ lint-md: pymarkdownlnt-install
 	@. $(DOCS_VENV); pymarkdownlnt \
 		--config $(DEV_DIR)/.pymarkdown.json \
 		--return-code-scheme explicit \
-		scan \
-			--recurse \
-			--exclude=$(DEV_DIR)/** \
-			--exclude=$(DOCS_VENVDIR)/** \
-			--exclude=$(DOCS_BUILDDIR)/** \
-			$(DOCS_SOURCEDIR); \
+		scan --recurse $(CHECK_PATH); \
 	status=$$?; \
 	if [ $$status -eq 1 ]; then \
 		echo "No Markdown files selected for linting"; \
@@ -142,48 +125,6 @@ lint-md: pymarkdownlnt-install
 	echo "pymarkdownlnt exited with code $$status"; \
 	exit $$status;
 
-# The formatter runs in its own virtualenv, isolated from the Sphinx venv, and
-# is installed from a hash-pinned lock file. --require-hashes pins every
-# transitive dependency, so a tampered or unexpected package fails to install.
-$(MDFORMAT_VENVDIR): $(MDFORMAT_DIR)/requirements.txt
-	@echo "... setting up mdformat virtualenv"
-	@rm -rf $(MDFORMAT_VENVDIR)
-	python3 -m venv $(MDFORMAT_VENVDIR) || { echo "You must install python3-venv before you can format the documentation."; exit 1; }
-	$(MDFORMAT_VENVDIR)/bin/pip install $(PIPOPTS) --require-virtualenv \
-	    --require-hashes --no-deps -r $(MDFORMAT_DIR)/requirements.txt \
-	    --log $(MDFORMAT_VENVDIR)/pip_install.log
-	@touch $(MDFORMAT_VENVDIR)
-
-mdformat-install: $(MDFORMAT_VENVDIR)
-
-# Only tracked Markdown files are formatted. This excludes the virtualenvs,
-# build output, and auto-generated reference pages, all of which are ignored by
-# Git. mdformat's own --exclude option requires Python 3.13+, so it is not used.
-MDFORMAT_FILES = git ls-files '*.md'
-
-# Format all Markdown sources in place. Settings live in .mdformat.toml.
-mdformat: mdformat-install
-	@$(MDFORMAT_FILES) | xargs -r $(MDFORMAT_CMD)
-
-# Report unformatted files without modifying them.
-mdformat-check: mdformat-install
-	@$(MDFORMAT_FILES) | xargs -r $(MDFORMAT_CMD) --check
-
-# Regenerate the hash-pinned lock file from requirements.in. Run this after
-# changing formatter versions, then commit both files.
-mdformat-lock:
-	@echo "... regenerating $(MDFORMAT_DIR)/requirements.txt"
-	@tmpdir=$$(mktemp -d); \
-	python3 -m venv $$tmpdir; \
-	$$tmpdir/bin/pip install --quiet --upgrade pip pip-tools; \
-	$$tmpdir/bin/pip-compile --generate-hashes --strip-extras \
-	    --header --annotation-style line \
-	    --output-file $(MDFORMAT_DIR)/requirements.txt \
-	    $(MDFORMAT_DIR)/requirements.in; \
-	status=$$?; \
-	rm -rf $$tmpdir; \
-	exit $$status
-
 vale-install: install
 	@. $(DOCS_VENV); test -f $(VALE_CONFIG) || python3 $(DEV_DIR)/get_vale_conf.py
 	@echo '.Name=="Canonical.400-Enforce-inclusive-terms"' > $(DEV_DIR)/styles/woke.filter
@@ -191,26 +132,19 @@ vale-install: install
 	@echo '.Name=="Canonical.000-US-spellcheck"' > $(DEV_DIR)/styles/spelling.filter
 	@. $(DOCS_VENV); find $(VALE_DIR)/vale_bin -size 195c -exec vale --version \;
 
-woke: vale-install
-	@cat $(DOCS_VOCAB)/accept.txt > $(DOCS_VOCAB)/accept_backup.txt
-	@cat $(DOCS_SOURCEDIR)/.custom_wordlist.txt >> $(DOCS_VOCAB)/accept.txt
-	@echo "Running Vale acceptable term check against $(CHECK_PATH). To change target set CHECK_PATH= with make command"
-	@. $(DOCS_VENV); vale --config="$(VALE_CONFIG)" --filter='$(DEV_DIR)/styles/woke.filter' --glob='*.{md,rst}' $(CHECK_PATH)
-	@cat $(DOCS_VOCAB)/accept_backup.txt > $(DOCS_VOCAB)/accept.txt && rm $(DOCS_VOCAB)/accept_backup.txt
+woke: VALE_FILTER = woke
+vale: VALE_FILTER = error
+spelling: VALE_FILTER = spelling
 
-vale: vale-install
-	@cat $(DOCS_VOCAB)/accept.txt > $(DOCS_VOCAB)/accept_backup.txt
-	@cat $(DOCS_SOURCEDIR)/.custom_wordlist.txt >> $(DOCS_VOCAB)/accept.txt
-	@echo "Running Vale against $(CHECK_PATH). To change target set CHECK_PATH= with make command"
-	@. $(DOCS_VENV); vale --config="$(VALE_CONFIG)" --filter='$(DEV_DIR)/styles/error.filter' --glob='*.{md,rst}' $(CHECK_PATH)
-	@cat $(DOCS_VOCAB)/accept_backup.txt > $(DOCS_VOCAB)/accept.txt && rm $(DOCS_VOCAB)/accept_backup.txt
-
-spelling: vale-install
-	@cat $(DOCS_VOCAB)/accept.txt > $(DOCS_VOCAB)/accept_backup.txt
-	@cat $(DOCS_SOURCEDIR)/.custom_wordlist.txt >> $(DOCS_VOCAB)/accept.txt
-	@echo "Running Vale against $(CHECK_PATH). To change target set CHECK_PATH= with make command"
-	@. $(DOCS_VENV); vale --config="$(VALE_CONFIG)" --filter='$(DEV_DIR)/styles/spelling.filter' --glob='*.{md,rst}' $(CHECK_PATH)
-	@cat $(DOCS_VOCAB)/accept_backup.txt > $(DOCS_VOCAB)/accept.txt && rm $(DOCS_VOCAB)/accept_backup.txt
+# Always restore the fetched vocabulary, including after a failed check.
+# Run these three targets sequentially; they share a vocabulary file.
+woke vale spelling: vale-install generate
+	@set -e; \
+	cp $(DOCS_VOCAB)/accept.txt $(DOCS_VOCAB)/accept_backup.txt; \
+	trap 'mv $(DOCS_VOCAB)/accept_backup.txt $(DOCS_VOCAB)/accept.txt' EXIT HUP INT TERM; \
+	cat $(DOCS_SOURCEDIR)/.custom_wordlist.txt >> $(DOCS_VOCAB)/accept.txt; \
+	. $(DOCS_VENV); \
+	vale --config="$(VALE_CONFIG)" --filter='$(DEV_DIR)/styles/$(VALE_FILTER).filter' --glob='*.{md,rst}' $(CHECK_PATH)
 
 spellcheck: spelling
 	@echo "Please note that the \`make spellcheck\` command is being deprecated in favor of \`make spelling\`"
@@ -224,10 +158,9 @@ pdf-prep: install
 
 pdf-prep-force:
 	apt-get update
-	apt-get upgrade -y
 	apt-get install --no-install-recommends -y $(DOCS_PDFPACKAGES) \
 
-pdf: pdf-prep generate
+pdf: pdf-prep
 	@. $(DOCS_VENV); $(SPHINX_BUILD) -M latexpdf "$(DOCS_SOURCEDIR)" "$(DOCS_BUILDDIR)" $(SPHINX_OPTS)
 	@rm ./$(DOCS_BUILDDIR)/latex/front-page-light.pdf || true
 	@rm ./$(DOCS_BUILDDIR)/latex/normal-page-footer.pdf || true
@@ -239,6 +172,9 @@ pdf: pdf-prep generate
 
 update: install
 	@. $(DOCS_VENV); _dev/update_sp.py
+
+# Keep Kafka-specific generation and formatting separate from upstream recipes.
+include $(DEV_DIR)/kafka.mk
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINX_OPTS).

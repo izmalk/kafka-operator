@@ -1,11 +1,12 @@
 # Environment
-*env*/
+.venv/
 .venv*/
+_dev/mdformat/.venv/
 
 # Sphinx
 _dev/warnings.txt
 _dev/.wordlist.dic
-_dev/.doctrees/
+_dev/.doctrees*/
 _dev/update/
 _dev/node_modules/
 
@@ -15,8 +16,9 @@ _dev/vale.ini
 
 # Build outputs
 _build
+_build-*/
 
-# Auto-generated reference pages (regenerate with: make generate)
+# Regenerate with make generate; never treat these as handwritten sources.
 reference/_generated/
 
 # Node.js

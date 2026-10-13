@@ -13,7 +13,7 @@ build:
   jobs:
     post_checkout:
     - git fetch --unshallow || true
-    # Cancel building pull requests when there aren't changed in the docs
+    # Cancel pull request builds only when there are no changes in the docs
     # directory or in the charm source files used to auto-generate reference
     # pages.  If there are no changes (git diff exits with 0) we force the
     # command to return with 183.
@@ -23,6 +23,10 @@ build:
       if [ "$READTHEDOCS_VERSION_TYPE" = "external" ] && git diff --quiet origin/main -- \
         'docs/' \
         '.readthedocs.yaml' \
+        '.github/workflows/automatic-doc-checks.yml' \
+        '.github/workflows/markdown-style-checks.yml' \
+        '.github/workflows/check-removed-urls.yml' \
+        'refresh_versions.toml' \
         'machine/actions.yaml' \
         'machine/config.yaml' \
         'k8s/actions.yaml' \
@@ -38,7 +42,7 @@ build:
     # Generate the auto-generated reference pages (actions, configurations,
     # statuses) from charm source files before Sphinx runs.  The output is
     # written to docs/reference/_generated/ (gitignored).
-    # PyYAML is installed from docs/requirements.txt before pre_build runs.
+    # Generator dependencies are installed before pre_build runs.
     pre_build:
     - python3 docs/_dev/generate_charm_reference.py
     - python3 docs/_dev/generate_statuses.py

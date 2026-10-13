@@ -16,8 +16,9 @@ __pycache__/
 
 # Sphinx build artifacts
 docs/_build/
-docs/.sphinx/.doctrees/
-docs/.sphinx/warnings.txt
+docs/_build-*/
+docs/_dev/.doctrees*/
+docs/_dev/warnings.txt
 
 # Terraform state files
 *.tfstate

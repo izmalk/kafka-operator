@@ -2,7 +2,8 @@
     "plugins": {
         "selectively_enable_rules": true,
         "heading-style": {
-            "enabled": false
+            "enabled": false,
+            "style": "atx"
         },
         "commands-show-output": {
             "enabled": false
@@ -38,8 +39,8 @@
         }
     },
     "extensions": {
-        "front-matter": {
-            "enabled": true
+        "front-matter" : {
+            "enabled" : true
         }
     }
 }

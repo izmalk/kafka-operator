@@ -2,6 +2,15 @@
 
 ## Build
 
+The scaffolding comes from `canonical/sphinx-stack` main at commit
+`cfc887196ebfd8aed0a0ed69515e524a133a4308` (2026-10-13). It uses the upstream Canonical Sphinx/Furo
+theme, not the optional `Ulwazi` theme. Kafka's generation and hash-pinned Markdown formatter
+targets live in `_dev/kafka.mk`.
+
+The Markdown lint configuration retains Kafka's existing heading and command-output choices. Blank
+lines around MyST directive fences and heading-adjacent reference labels are not enforced by the
+generic Markdown linter; the MyST formatter handles these without changing their meaning.
+
 From the `docs/` directory:
 
 ```bash
@@ -41,10 +50,10 @@ The `sphinx-llm` extension generates `llms.txt`, `llms-full.txt`, and a Markdown
 page (`<page>/index.html.md`). Three pieces of configuration keep these discoverable and correct:
 
 1. **`html_baseurl` must include the Read the Docs version segment.** Published docs are served
-   under `https://canonical.com/data/kafka/docs/<version>/`. `conf.py` builds `html_baseurl` from
-   `slug` and `version_slug` (`READTHEDOCS_VERSION`, defaulting to `local`). A trailing slash is
-   required. Omitting either the version segment or the trailing slash makes every URL in
-   `sitemap.xml` and `llms.txt` return 404.
+   under `https://canonical.com/data/kafka/docs/<version>/`. `conf.py` uses
+   `READTHEDOCS_CANONICAL_URL` when supplied, otherwise `slug` and `version_slug`
+   (`READTHEDOCS_VERSION`, defaulting to `local`). A trailing slash is required. Omitting either the
+   version segment or the trailing slash makes every URL in `sitemap.xml` and `llms.txt` return 404.
 2. **HTML directive** — `_templates/header.html` renders a visually-hidden
    `<div data-agent-directive>` pointing at `llms.txt` and explaining the `.md` URL convention. It
    is hidden with the clip-rect technique in `_static/agent-directive.css`, not `display: none`, so

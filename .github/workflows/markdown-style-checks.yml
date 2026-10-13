@@ -1,16 +1,27 @@
 name: Markdown style checks
 
 on:
+  workflow_call:
   push:
     branches:
     - main
     paths:
     - 'docs/**'   # Only run on changes to the docs directory
+    - '.github/workflows/markdown-style-checks.yml'
+    - 'machine/actions.yaml'
+    - 'machine/config.yaml'
+    - 'common/single_kernel_kafka/core/literals.py'
+    - 'refresh_versions.toml'
   pull_request:
     branches:
     - '*'
     paths:
     - 'docs/**'   # Only run on changes to the docs directory
+    - '.github/workflows/markdown-style-checks.yml'
+    - 'machine/actions.yaml'
+    - 'machine/config.yaml'
+    - 'common/single_kernel_kafka/core/literals.py'
+    - 'refresh_versions.toml'
 
 jobs:
   markdown-lint:
@@ -19,6 +30,9 @@ jobs:
     - uses: actions/checkout@v5
       with:
         fetch-depth: 0
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.11'
     - name: Create venv
       working-directory: "docs"
       run: make install

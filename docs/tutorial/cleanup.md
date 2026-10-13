@@ -19,9 +19,9 @@ This is a part of the [Charmed Apache Kafka Tutorial](index.md).
 
 (remove-kafka-and-juju)=
 
-<!-- vale Canonical.004-Canonical-product-names = YES -->
-
 ## Remove tutorial
+
+<!-- vale Canonical.004-Canonical-product-names = YES -->
 
 ```{caution}
 Removing a Juju model may result in data loss for all applications in this model.
@@ -43,9 +43,9 @@ PostgreSQL). Your Juju controller and other models (if any) will remain intact f
 
 (remove-juju)=
 
-<!-- vale Canonical.004-Canonical-product-names = YES -->
-
 ## (Optional) Remove Juju and the cloud
+
+<!-- vale Canonical.004-Canonical-product-names = YES -->
 
 If you don't need Juju anymore and want to free up additional resources on your machine, you can
 remove the Juju controller and Juju itself.

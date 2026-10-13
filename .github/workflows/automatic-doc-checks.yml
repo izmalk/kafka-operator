@@ -9,6 +9,9 @@ on:
       # Run on changes to the docs directory and the charm source files
       # used to auto-generate reference pages
       - 'docs/**'
+      - '.readthedocs.yaml'
+      - '.github/workflows/automatic-doc-checks.yml'
+      - 'refresh_versions.toml'
       - 'machine/actions.yaml'
       - 'machine/config.yaml'
       - 'k8s/actions.yaml'
@@ -32,4 +35,19 @@ jobs:
     uses: canonical/documentation-workflows/.github/workflows/documentation-checks.yaml@main
     with:
       working-directory: "docs"
+      python-version: "3.11"
       fetch-depth: 0
+
+  documentation-build:
+    name: Strict documentation build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Build Kafka documentation
+        working-directory: docs
+        run: make html
